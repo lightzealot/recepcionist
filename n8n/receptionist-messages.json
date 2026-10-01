@@ -1,0 +1,62 @@
+{
+  "name": "AI Receptionist - messages",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "receptionist-messages",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wh-receptionist",
+      "name": "Receptionist webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "receptionist-messages"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalizes the AIReceptionist webhook payload.\n// Input: { message: {...}, context: {...} }\nconst b = $input.first().json;\nreturn [{ json: {\n  caller_name: b.message?.caller_name ?? \"\",\n  callback_number: b.message?.callback_number ?? \"\",\n  message: b.message?.message ?? \"\",\n  business: b.message?.business_name ?? \"\",\n  timestamp: b.message?.timestamp ?? \"\",\n  call_id: b.context?.call_id ?? null\n}}];"
+      },
+      "id": "code-normalize",
+      "name": "Normalize message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ received: true }) }}",
+        "options": {}
+      },
+      "id": "resp-ok",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "content": "## AI Receptionist → n8n\nMessages taken by the AI arrive here.\n\n**Setup:**\n1. Activate this workflow and copy the Production webhook URL.\n2. Set N8N_WEBHOOK_URL in the worker .env and uncomment the webhook channel in the business YAML.\n3. Restart the worker and leave a test message by phone.\n\n**Next:** attach Google Calendar (create event), Gmail/Slack (notify), or Sheets/CRM (log) after 'Normalize message'.",
+        "height": 360,
+        "width": 380,
+        "color": 5
+      },
+      "id": "note-setup",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 40]
+    }
+  ],
+  "connections": {
+    "Receptionist webhook": {
+      "main": [[{ "node": "Normalize message", "type": "main", "index": 0 }]]
+    },
+    "Normalize message": {
+      "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]]
+    }
+  }
+}

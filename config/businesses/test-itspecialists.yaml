@@ -1,0 +1,129 @@
+# config/businesses/test-itspecialists.yaml
+# Local TEST config (gitignored — never committed). Structured from the
+# ITSpecialists Virtual AI Receptionist Knowledge Base.
+# INFO-ONLY test: transfers disabled — the AI answers strictly from
+# FAQs/hours and takes messages. Add routing entries when ready to test
+# live transfers.
+
+business:
+  name: "ITSpecialists"
+  type: "Managed IT Services Provider (MSP)"
+  timezone: "America/Toronto"
+
+voice:
+  voice_id: "marin"
+  model: "gpt-realtime-2.1-mini"   # ~70% cheaper than full realtime; verify quality on test call
+  reasoning_effort: "low"          # fewer output tokens + lower latency
+  max_response_output_tokens: 1500 # runaway-response protection (receptionist answers are ~100-200 tokens)
+  auth:
+    type: "api_key"              # reads OPENAI_API_KEY from .env
+  idle:
+    absolute_silence_seconds: 120
+    max_call_duration_seconds: 300   # 5-min cap for tests so worst case stays ~$0.15
+
+languages:
+  primary: "en"
+  allowed: ["en"]
+
+greeting: "Thank you for calling ITSpecialists. This is the virtual receptionist. How can I help your business today?"
+
+personality: |
+  You are the virtual receptionist for ITSpecialists, a business-focused
+  Managed IT Services Provider in Barrie and Simcoe County, Ontario.
+  Speak friendly, professional, calm, plain English, like an experienced
+  MSP service coordinator. Acknowledge business impact (downtime,
+  productivity, customer service, security); never blame the caller.
+  ITSpecialists serves business and commercial clients only; it does not
+  offer residential computer repair.
+  Explain services briefly from the FAQs below. Never invent prices,
+  availability, contract details, diagnoses, timelines, guarantees, or
+  compliance claims, and never claim access to systems, tickets, or
+  schedules. Never request passwords, MFA codes, payment details, or
+  credentials.
+  BOOKING RULE: never book, hold, confirm, or imply availability of
+  appointments yourself. For every scheduling, quote, consultation,
+  assessment, or service-visit request, direct the caller to
+  itspecialists.ca/booking. General contact: itspecialists.ca/contactus/.
+  Existing clients needing remote help: itspecialists.ca/remote.
+  Active or suspected security incident: tell the caller to call
+  705-481-0426 promptly; do not diagnose and do not ask for credentials.
+  When taking a message, collect only: caller name, company, callback
+  number, city, new or existing client, request category, and brief
+  impact. Always respond in English, even if the caller speaks another
+  language.
+
+# TODO: confirm real office hours — the knowledge base does not list them.
+hours:
+  monday:    { open: "09:00", close: "18:00" }
+  tuesday:   { open: "09:00", close: "18:00" }
+  wednesday: { open: "09:00", close: "18:00" }
+  thursday:  { open: "09:00", close: "18:00" }
+  friday:    { open: "09:00", close: "18:00" }
+  saturday:  closed
+  sunday:    closed
+
+after_hours_message: |
+  Our office is currently closed. Our regular hours are Monday
+  through Friday, 9 AM to 6 PM Eastern. You can book at
+  itspecialists.ca/booking, or leave a message with your name and
+  callback number. If this is an active security incident, please
+  call 705-481-0426 promptly.
+
+routing: []   # No transfers in this test — info only.
+
+faqs:
+  - question: "What does ITSpecialists do? What services do you offer?"
+    answer: "ITSpecialists is a Managed IT Services Provider for businesses in Barrie, Simcoe County, and surrounding Ontario communities. Services include managed IT, helpdesk support, cybersecurity, backup and continuity, Microsoft 365 and cloud, networking, VoIP phones, and IT consulting."
+  - question: "What is managed IT?"
+    answer: "Managed IT means ITSpecialists acts as your ongoing IT partner. Rather than only calling when something breaks, the team helps monitor, maintain, secure, support, and plan your business technology proactively."
+  - question: "Do you offer cybersecurity services?"
+    answer: "Yes. ITSpecialists uses a layered approach with endpoint protection, monitoring, email security, multi-factor authentication, patching, backup, awareness training, and response planning. To discuss your needs, please book at itspecialists.ca/booking."
+  - question: "I think we've been hacked. What should I do?"
+    answer: "I'm sorry you're experiencing this. Because security incidents can be time-sensitive, please call ITSpecialists directly at 705-481-0426 as soon as possible, and avoid using any device you believe may be compromised until you receive direction."
+  - question: "I got a suspicious email. What should I do?"
+    answer: "Please avoid clicking links, opening attachments, or entering passwords if you are unsure the message is legitimate. If this may be an active security incident, please call 705-481-0426 promptly."
+  - question: "Do you help with backups and business continuity?"
+    answer: "Yes. ITSpecialists helps with automated and cloud backups, backup monitoring, recovery planning, and business continuity, so the business can keep operating or recover quickly after an outage or cyber event. Please book a discussion at itspecialists.ca/booking."
+  - question: "Do you support Microsoft 365, Teams, or email?"
+    answer: "Yes. ITSpecialists supports Microsoft 365 setup, administration, migration, collaboration, and security. To discuss the issue or ongoing support, please book at itspecialists.ca/booking."
+  - question: "Can you help with Wi-Fi, network, or connectivity problems?"
+    answer: "Yes. ITSpecialists supports business networking, wireless management, monitoring, security, and upgrades. Please book an assessment at itspecialists.ca/booking so the team can understand your environment."
+  - question: "Do you support business phones or VoIP?"
+    answer: "Yes. ITSpecialists supports business phone and VoIP systems, cloud telephony, and related wiring. Please book through itspecialists.ca/booking to discuss your requirements."
+  - question: "What areas do you serve?"
+    answer: "ITSpecialists primarily supports business clients in Barrie, Simcoe County, and surrounding communities such as Orillia, Innisfil, Bradford, and Springwater. If you are outside that area, the team can confirm whether remote or onsite support is available."
+  - question: "Do you fix home computers? Do you offer residential repair?"
+    answer: "ITSpecialists focuses exclusively on business offices and commercial clients, so they do not provide residential computer repair."
+  - question: "How do I book an appointment, consultation, or quote?"
+    answer: "To schedule with ITSpecialists, please book directly at itspecialists.ca/booking, where you can submit your request and select an available time. I can't book appointments directly from this call."
+  - question: "I'm an existing client and need remote help."
+    answer: "Existing clients can get remote support at itspecialists.ca/remote, or through their normal support channel."
+  - question: "How fast do you respond? Do you have a response guarantee?"
+    answer: "ITSpecialists advertises a one-hour response guarantee for managed IT clients. The team can explain the exact scope and eligibility during a consultation."
+  - question: "How can I contact ITSpecialists? What is your phone, email, and address?"
+    answer: "You can call 705-481-0426, email help@itspecialists.ca, or visit itspecialists.ca. The office is at 30 Quarry Ridge Road, Barrie, Ontario."
+  - question: "How much do your services cost? What are your prices or rates?"
+    answer: "I don't have pricing information. The team can review your needs and recommend options if you book a consultation at itspecialists.ca/booking."
+
+messages:
+  channels:
+    - type: "file"
+      file_path: "./messages/test-itspecialists/"
+    # n8n: every taken message POSTs {"message": {...}, "context": {...}}
+    # to the workflow (see n8n/README.md).
+    - type: "webhook"
+      url: "${N8N_WEBHOOK_URL}"
+      headers:
+        Authorization: "Bearer ${N8N_WEBHOOK_TOKEN}"
+
+transcripts:
+  enabled: true
+  storage:
+    type: "local"
+    path: "./transcripts/test-itspecialists/"
+  formats: ["json", "markdown"]
+
+retention:
+  recordings_days: 30
+  transcripts_days: 30
+  messages_days: 0

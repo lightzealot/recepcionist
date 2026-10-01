@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Receptionist Console · ITSpecialists</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div><strong>Receptionist</strong><small>ITSpecialists console</small></div>
+    </div>
+    <nav id="nav">
+      <button data-view="overview" class="active">Overview</button>
+      <button data-view="calls">Calls</button>
+      <button data-view="messages">Messages</button>
+      <button data-view="config">Config</button>
+      <button data-view="spend">Spend</button>
+      <button data-view="settings">Settings</button>
+    </nav>
+    <div class="conn"><span id="conn-dot" class="dot idle"></span><span id="conn-text">Not connected</span></div>
+  </aside>
+  <main>
+    <section id="view-overview" class="view active">
+      <div class="view-head"><h1>Overview</h1><button id="btn-refresh" class="btn">Refresh</button></div>
+      <div id="overview-cards" class="cards"></div>
+      <h2>Recent calls</h2>
+      <div id="overview-recent"></div>
+    </section>
+    <section id="view-calls" class="view">
+      <div class="view-head"><h1>Calls</h1><button id="btn-calls-refresh" class="btn">Refresh</button></div>
+      <div class="split">
+        <div id="calls-list" class="list"></div>
+        <div id="call-detail" class="detail"><p class="muted">Select a call to see its transcript.</p></div>
+      </div>
+    </section>
+    <section id="view-messages" class="view">
+      <div class="view-head"><h1>Messages</h1><button id="btn-msg-refresh" class="btn">Refresh</button></div>
+      <div id="messages-list"></div>
+    </section>
+    <section id="view-config" class="view">
+      <div class="view-head"><h1>Config</h1><button id="btn-cfg-refresh" class="btn">Refresh</button></div>
+      <dl id="config-list" class="kv"></dl>
+    </section>
+    <section id="view-spend" class="view">
+      <div class="view-head"><h1>Spend</h1><button id="btn-spend-refresh" class="btn">Refresh</button></div>
+      <div id="spend-body"></div>
+    </section>
+    <section id="view-settings" class="view">
+      <div class="view-head"><h1>Settings</h1></div>
+      <form id="settings-form" class="card form">
+        <label>API base URL
+          <input id="set-url" type="url" placeholder="http://127.0.0.1:8090" autocomplete="off">
+        </label>
+        <label>API token
+          <input id="set-token" type="password" placeholder="DASHBOARD_TOKEN from .env" autocomplete="off">
+        </label>
+        <div class="row">
+          <button type="submit" class="btn primary">Save &amp; connect</button>
+          <span id="settings-msg" class="muted"></span>
+        </div>
+        <p class="muted small">Stored only in this browser (localStorage). Point it at your VPS API when the worker moves there.</p>
+      </form>
+    </section>
+  </main>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

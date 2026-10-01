@@ -1,0 +1,15 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.git/
+.env
+.env.local
+messages/
+transcripts/
+recordings/
+dashboard/
+n8n/
+deploy/
+tests/

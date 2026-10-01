@@ -23,6 +23,8 @@ dependencies = [
     "google-auth>=2.32",
     "google-auth-oauthlib>=1.2",
     "python-dateutil>=2.9",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
 ]
 
 [project.optional-dependencies]

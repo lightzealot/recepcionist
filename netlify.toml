@@ -1,0 +1,4 @@
+# Netlify: static dashboard, no build step.
+# If the site base is the repo root, set Base directory to AIReceptionist.
+[build]
+  publish = "dashboard"
