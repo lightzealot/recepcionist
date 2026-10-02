@@ -39,6 +39,10 @@ html{scroll-behavior:smooth}
 html,body{overflow-x:clip}
 .tablewrap{overflow-x:auto}
 .mini3{--od-cols:3}
+#msgList .od-row{flex-wrap:wrap;row-gap:4px}
+.msg .bubble,.transcript,.feeditem span,.qrow b{overflow-wrap:anywhere}
+.feeditem span{min-width:0}
+.status-pill{max-width:100%}
 body{margin:0;font-family:var(--font-body);background:var(--bg);color:var(--ink);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
 h1,h2,h3{font-family:var(--font-display);line-height:1.2;margin:0;letter-spacing:-.01em}
 p{margin:0}
@@ -184,10 +188,10 @@ footer.note{color:var(--muted);font-size:12.5px;margin-top:18px}
   .tab{min-height:44px}
   dl.kv{grid-template-columns:1fr}
   dl.kv dd{margin-bottom:8px}
+  .mini3{--od-cols:1}
 }
 @media(max-width:480px){
   .live-strip{grid-template-columns:minmax(0,1fr)}
-  .mini3{--od-cols:1}
   .pagehead .btn,.pagehead .btn.primary{flex:1 1 100%;justify-content:center}
   .status-pill{flex:1 1 auto;justify-content:center}
 }
