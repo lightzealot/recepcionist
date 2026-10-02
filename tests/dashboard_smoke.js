@@ -8,7 +8,8 @@ const vm = require("vm");
 const html = fs.readFileSync(
   require("path").join(__dirname, "..", "dashboard", "index.html"), "utf8");
 const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
-if (scripts.length !== 1) throw new Error("expected 1 inline script, got " + scripts.length);
+const main = scripts.find((s) => s.includes("loadAll"));
+if (!main) throw new Error("main inline script not found");
 
 // ---- canned API (shapes mirror api_server.py) ----
 const NOW = new Date().toISOString();
@@ -72,10 +73,11 @@ const documentStub = {
   querySelectorAll: () => [],
   getElementById(id) { return (byId[id] = byId[id] || makeEl()); },
   createElement: () => makeEl(),
+  documentElement: { _a: {}, setAttribute(k, v) { this._a[k] = String(v); }, getAttribute(k) { return this._a[k] ?? null; } },
   addEventListener(ev, fn) { documentStub._h = documentStub._h || {}; documentStub._h[ev] = fn; },
   body: makeEl(),
 };
-const ls = { rx_api_url: "https://api.test", rx_api_token: "test-token" };
+const ls = { rx_api_url: "https://api.test", rx_api_token: "test-token", rx_theme: "ledger" };
 
 const sandbox = {
   document: documentStub,
@@ -98,11 +100,12 @@ const assert = (cond, msg) => {
 };
 
 (async () => {
-  vm.runInContext(scripts[0], sandbox, { filename: "dashboard-inline.js" });
+  vm.runInContext(main, sandbox, { filename: "dashboard-inline.js" });
   for (let i = 0; i < 100 && byId.statusText?.textContent !== "Connected"; i++)
     await new Promise((r) => setImmediate(r));
 
   assert(byId.statusText.textContent === "Connected" && byId.connDot.className === "dot ok", "init+loadAll connects");
+  assert(documentStub.documentElement.getAttribute("data-theme") === "ledger", "saved theme applied on init");
   assert(byId.kpiCalls.textContent === "2", "KPI calls rendered (2)");
   assert(byId.msgList.innerHTML.includes("Andrew"), "message rendered");
   assert((byId.chart.innerHTML.match(/class="bar/g) || []).length === 5, "chart has 5 bars");

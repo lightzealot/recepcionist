@@ -6,7 +6,8 @@
 <title>Receptionist Console · ITSpecialists</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("rx_theme")||"nova");}catch(e){}</script>
 <style>
 @layer od-layout {
   :where(.od-stack,.od-row,.od-row-top,.od-cluster,.od-grid,.od-field,.od-stat,.od-cell,.od-tile) > :where(*) { min-width: 0; }
@@ -196,6 +197,56 @@ footer.note{color:var(--muted);font-size:12.5px;margin-top:18px}
   .pagehead .btn,.pagehead .btn.primary{flex:1 1 100%;justify-content:center}
   .status-pill{flex:1 1 auto;justify-content:center}
 }
+/* Ledger theme (data-theme="ledger"): cream paper, 2px ink borders,
+   Space Grotesk display + JetBrains Mono numerals. */
+[data-theme="ledger"]{
+  --bg:#F5EFE6; --surface:#FFFFFF; --surface-2:#EFE7D8; --ink:#0A0A0A; --muted:#5C5648;
+  --line:#0A0A0A; --accent:#1F4A4E; --accent-strong:#143337; --accent-soft:#DCE6E6;
+  --warn:#8a6818; --warn-bg:#ECE0CB; --danger:#A91E1E; --danger-bg:#F3D9D2;
+  --success:#2A7A4A; --success-bg:#E6F0EA; --info:#1F4A4E; --info-bg:#DCE6E6;
+  --shadow:inset 0 2px 0 rgba(255,255,255,.5),inset 0 -2px 8px rgba(10,10,10,.06);
+  --font-display:"Space Grotesk","Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,monospace;
+}
+[data-theme="ledger"] :focus-visible{outline-color:#0A0A0A}
+[data-theme="ledger"] .card,[data-theme="ledger"] .kpi{border:2px solid #0A0A0A}
+[data-theme="ledger"] .card-h{border-bottom:2px solid #0A0A0A}
+[data-theme="ledger"] .btn{border:2px solid #0A0A0A}
+[data-theme="ledger"] .btn.primary{background:#0A0A0A;border-color:#0A0A0A}
+[data-theme="ledger"] .btn.primary:hover{background:#2b2b2b}
+[data-theme="ledger"] .badge{border:2px solid #0A0A0A}
+[data-theme="ledger"] .b-soon{border-style:dashed}
+[data-theme="ledger"] .search,[data-theme="ledger"] .status-pill{border:2px solid #0A0A0A}
+[data-theme="ledger"] .form input,[data-theme="ledger"] .replybox input,[data-theme="ledger"] select{border:2px solid #0A0A0A}
+[data-theme="ledger"] .tab{border:2px solid #0A0A0A}
+[data-theme="ledger"] .tab[aria-selected="true"]{background:#E8C6B8;color:#0A0A0A;border-color:#0A0A0A}
+[data-theme="ledger"] .msg .bubble,[data-theme="ledger"] .feeditem{border:2px solid #0A0A0A}
+[data-theme="ledger"] table.data th,[data-theme="ledger"] table.data td{border-top:2px solid #0A0A0A}
+[data-theme="ledger"] .kpi strong,[data-theme="ledger"] .feeditem time{font-family:var(--font-mono)}
+[data-theme="ledger"] .kpi small{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.1em;font-size:11px}
+[data-theme="ledger"] .navlabel{font-family:var(--font-display)}
+[data-theme="ledger"] .topbar{background:rgba(245,239,230,.92)}
+[data-theme="ledger"] .side{background:#1F4A4E;color:#F5EFE6}
+[data-theme="ledger"] .mark{background:#E8C6B8;color:#0A0A0A}
+[data-theme="ledger"] .brand small,[data-theme="ledger"] .ai-card p{color:#CFC6B2}
+[data-theme="ledger"] .navlabel{color:#B7AB90}
+[data-theme="ledger"] .nav a{color:#EDE6D6}
+[data-theme="ledger"] .nav a:hover{background:rgba(245,239,230,.08)}
+[data-theme="ledger"] .nav a.active{background:#E8C6B8;color:#0A0A0A}
+[data-theme="ledger"] .nav a .count{background:rgba(245,239,230,.14);color:#F5EFE6}
+[data-theme="ledger"] .nav a.active .count{background:rgba(10,10,10,.15);color:#0A0A0A}
+[data-theme="ledger"] .ai-card{background:#17393E;border:2px solid #0A0A0A}
+[data-theme="ledger"] .qpip{background:#DCE6E6}
+[data-theme="ledger"] .bar{background:#DCE6E6;border:2px solid #0A0A0A}
+[data-theme="ledger"] .bar.today{background:#1F4A4E}
+[data-theme="ledger"] .toast{background:#0A0A0A}
+[data-theme="ledger"] .themeopt:has(input:checked){border-color:#0A0A0A;background:#ECE0CB}
+.themeset{display:grid;gap:8px;margin-bottom:16px}
+.themeopt{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
+.themeopt input{accent-color:var(--accent);width:18px;height:18px;flex:none}
+.themeopt b{display:block;font-size:14px}
+.themeopt small{color:var(--muted);font-size:12.5px}
+.themeopt:has(input:checked){border-color:var(--accent)}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
@@ -314,6 +365,11 @@ footer.note{color:var(--muted);font-size:12.5px;margin-top:18px}
         <section class="card" id="settings" aria-labelledby="setH">
           <div class="card-h"><h2 id="setH">Settings</h2><span class="hint">API connection</span></div>
           <div class="card-b">
+            <h3 style="font-size:14px;margin:0 0 8px">Appearance</h3>
+            <div class="themeset" role="radiogroup" aria-label="Dashboard theme">
+              <label class="themeopt"><input type="radio" name="theme" value="nova" checked><span><b>Nova</b><small>Teal · soft cards</small></span></label>
+              <label class="themeopt"><input type="radio" name="theme" value="ledger"><span><b>Ledger</b><small>Cream paper · bold ink borders</small></span></label>
+            </div>
             <form id="settingsForm" class="form">
               <label>API base URL
                 <input id="setUrl" type="url" placeholder="https://rcp.andresgomez.store" autocomplete="off">
@@ -360,6 +416,12 @@ let callFilter="all";
 
 function toast(msg){const w=$("#toasts");const t=document.createElement("div");t.className="toast";t.innerHTML="<span aria-hidden=\"true\">✓</span><span></span>";t.lastChild.textContent=msg;w.appendChild(t);setTimeout(()=>{t.style.opacity="0";t.style.transition="opacity .3s";setTimeout(()=>t.remove(),320)},3200);}
 function setConn(state,text){$("#connDot").className="dot "+state;$("#statusText").textContent=text;}
+function applyTheme(name){
+  const t=name==="ledger"?"ledger":"nova";
+  document.documentElement.setAttribute("data-theme",t);
+  $$('input[name="theme"]').forEach(r=>{r.checked=r.value===t;});
+  try{localStorage.setItem("rx_theme",t);}catch(e){}
+}
 
 const fmtDur=(s)=>s==null?"—":Math.floor(s/60)+"m "+Math.round(s%60)+"s";
 const fmtDate=(iso)=>{if(!iso)return"—";const d=new Date(iso);return isNaN(d)?iso:d.toLocaleString();};
@@ -541,6 +603,10 @@ $("#msgRefresh").addEventListener("click",async()=>{try{cache.messages=(await ap
 $("#spendRefresh").addEventListener("click",async()=>{try{cache.spend=await api("/api/spend");renderSpend();renderKpis();toast("Spend refreshed.");}catch(e){toast(e.message);}});
 $("#exportBtn").addEventListener("click",exportCSV);
 $("#replyForm").addEventListener("submit",e=>{e.preventDefault();toast("Replies — coming soon.");});
+document.addEventListener("change",e=>{
+  const r=e.target&&e.target.closest?e.target.closest('input[name="theme"]'):null;
+  if(r){applyTheme(r.value);toast("Theme: "+r.value+".");}
+});
 $("#settingsForm").addEventListener("submit",async e=>{
   e.preventDefault();
   store.save($("#setUrl").value.trim(),$("#setToken").value.trim());
@@ -560,6 +626,7 @@ $("#settingsForm").addEventListener("submit",async e=>{
 
 // Init
 (function(){
+  try{applyTheme(localStorage.getItem("rx_theme")||"nova");}catch(e){applyTheme("nova");}
   const{url,token}=store.load();
   $("#setUrl").value=url;$("#setToken").value=token;
   const h=new Date().getHours();
