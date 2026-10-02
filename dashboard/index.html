@@ -1,72 +1,545 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Receptionist Console · ITSpecialists</title>
-<link rel="stylesheet" href="styles.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+@layer od-layout {
+  :where(.od-stack,.od-row,.od-row-top,.od-cluster,.od-grid,.od-field,.od-stat,.od-cell,.od-tile) > :where(*) { min-width: 0; }
+  .od-stack   { display: flex; flex-direction: column; gap: var(--od-gap, 8px); }
+  .od-row     { display: flex; align-items: center; gap: var(--od-gap, 8px); }
+  .od-row-top { display: flex; align-items: flex-start; gap: var(--od-gap, 8px); }
+  .od-cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--od-gap, 8px); }
+  .od-fill    { flex: 1 1 0; min-width: 0; }
+  .od-fixed   { flex: none; }
+  .od-grid    { display: grid; gap: var(--od-gap, 12px); grid-template-columns: repeat(var(--od-cols, 3), minmax(0, 1fr)); }
+  .od-stat, .od-field, .od-cell { display: grid; gap: var(--od-gap, 2px); }
+  :where(.od-stat,.od-field,.od-cell) > :where(*) { display: block; }
+  .od-tile { display: grid; grid-template-rows: auto 1fr; }
+  :where(.od-tile) > :where(*) { display: block; }
+  .od-truncate { display: block; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .od-clamp-2 { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; -webkit-line-clamp: 2; }
+  .od-nowrap  { white-space: nowrap; }
+  .od-scroll { overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+}
+:root{
+  --bg:#EEF2F4; --surface:#FFFFFF; --surface-2:#F7FAFA; --ink:#14202B; --muted:#51606F;
+  --line:#DCE4E8; --accent:#0E7C7B; --accent-strong:#0A5F5E; --accent-soft:#DDF0EF;
+  --warn:#8A4B00; --warn-bg:#FFF3E0; --danger:#A91E1E; --danger-bg:#FDECEC;
+  --success:#116B3A; --success-bg:#E4F4E9; --info:#1D5BBF; --info-bg:#E8F0FE;
+  --radius:12px; --radius-sm:9px; --shadow:0 1px 2px rgba(16,24,40,.07),0 4px 16px rgba(16,40,.06);
+  --font-display:"Sora","Inter",system-ui,sans-serif; --font-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:var(--font-body);background:var(--bg);color:var(--ink);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--font-display);line-height:1.2;margin:0;letter-spacing:-.01em}
+p{margin:0}
+a{color:var(--accent-strong)}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid #0E7C7B;outline-offset:2px;border-radius:6px}
+.shell{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:100vh}
+/* Sidebar */
+.side{background:#10222B;color:#EAF2F2;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:12px;padding:20px 18px 16px}
+.mark{width:40px;height:40px;border-radius:12px;background:var(--accent);display:grid;place-items:center;flex:none;color:#fff;font-family:var(--font-display);font-weight:700;font-size:15px}
+.brand b{display:block;font-family:var(--font-display);font-size:16px}
+.brand small{display:block;color:#9FB6B5;font-size:12px}
+.navlabel{padding:10px 20px 6px;font-size:11px;letter-spacing:.12em;color:#8AA5A4;font-weight:700}
+.nav{display:flex;flex-direction:column;gap:2px;padding:0 12px}
+.nav a{display:flex;align-items:center;gap:11px;color:#D8E6E5;text-decoration:none;padding:10px 12px;border-radius:10px;font-weight:600;font-size:14px;border:1px solid transparent}
+.nav a svg{width:18px;height:18px;flex:none}
+.nav a .count{margin-left:auto;background:#1E3A42;color:#BFE3E1;font-size:12px;font-weight:700;border-radius:99px;padding:1px 9px}
+.nav a:hover{background:#18333C}
+.nav a.active{background:var(--accent);color:#fff}
+.nav a.active .count{background:rgba(255,255,255,.22);color:#fff}
+.ai-card{margin:auto 14px 14px;background:#162E37;border:1px solid #234650;border-radius:14px;padding:14px}
+.ai-card .row{display:flex;align-items:center;gap:10px}
+.dot{width:10px;height:10px;border-radius:99px;background:#2BD98A;box-shadow:0 0 0 5px rgba(43,217,138,.18);flex:none}
+.dot.err{background:#E5484D;box-shadow:0 0 0 5px rgba(229,72,77,.18)}
+.dot.idle{background:#9AA9B3;box-shadow:0 0 0 5px rgba(154,169,179,.18)}
+.ai-card b{font-size:14px}.ai-card p{color:#9FB6B5;font-size:12.5px;margin-top:6px}
+.ai-card button{margin-top:10px;width:100%;background:#fff;color:#0B2A33;border:0;border-radius:9px;font-weight:700;padding:10px}
+/* Main */
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:20;background:rgba(238,242,244,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:14px 28px;display:flex;align-items:center;gap:14px}
+.search{flex:1;max-width:460px;display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 13px}
+.search input{border:0;outline:0;flex:1;font:inherit;background:transparent;min-width:0}
+.status-pill{display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--line);border-radius:99px;padding:7px 14px;font-size:13.5px;font-weight:600;white-space:nowrap}
+.userchip{display:flex;align-items:center;gap:10px}
+.avatar{width:38px;height:38px;border-radius:99px;background:#16323B;color:#fff;display:grid;place-items:center;font-weight:700;flex:none}
+.content{padding:24px 28px 60px;max-width:1240px;width:100%;margin:0 auto}
+.pagehead{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:4px 0 18px}
+.pagehead h1{font-size:30px}
+.pagehead p{color:var(--muted)}
+.pagehead .sp{flex:1}
+.live-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px 16px;display:grid;gap:2px}
+.kpi small{color:var(--muted);font-weight:600;font-size:12.5px;display:block}
+.kpi strong{font-family:var(--font-display);font-size:26px;display:block}
+.kpi .trend{font-size:12.5px;font-weight:700}
+.up{color:var(--success)}.down{color:var(--danger)}
+.grid2{display:grid;grid-template-columns:1.35fr .9fr;gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);min-width:0}
+.card-h{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.card-h h2{font-size:16.5px}
+.card-h .hint{font-size:12.5px;color:var(--muted)}
+.card-h .right{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.card-b{padding:16px 18px}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border-radius:99px;padding:3px 10px;border:1px solid transparent;white-space:nowrap}
+.b-live{background:var(--success-bg);color:var(--success);border-color:#BFE3CC}
+.b-queue{background:var(--info-bg);color:var(--info);border-color:#C4D6F5}
+.b-wait{background:var(--warn-bg);color:var(--warn);border-color:#F0D6A8}
+.b-done{background:#EAF0F2;color:#43565F;border-color:var(--line)}
+.b-soon{background:#EDF1F3;color:#43565F;border:1px dashed #B9C6CB}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:10px 15px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.btn:hover{border-color:#9FB3BC;background:#F4F8F8}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-strong)}
+.btn.small{padding:7px 11px;font-size:13px;border-radius:8px}
+.btn.soon{opacity:.62}
+.caller{display:flex;gap:12px;align-items:center}
+.meta small{display:block;color:var(--muted);font-size:12.5px}
+.meta b{display:block;font-size:15.5px}
+.transcript{background:#0F2229;color:#D9EDEB;border-radius:10px;padding:12px 14px;font-size:13.5px;display:grid;gap:8px;max-height:220px;overflow:auto}
+.transcript b{color:#8CE8D8}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.qrow{display:flex;align-items:center;gap:12px;padding:11px 4px;border-top:1px solid var(--line);cursor:pointer}
+.qrow:first-of-type{border-top:0}
+.qrow:hover{background:var(--surface-2)}
+.qpip{width:38px;height:38px;border-radius:99px;display:grid;place-items:center;font-weight:700;background:#E8F0F2;color:#33454F;flex:none;font-size:13px}
+.calldetail{padding:4px 4px 12px 54px}
+.msg{display:flex;gap:11px;padding:11px 2px;border-top:1px solid var(--line)}
+.msg:first-child{border-top:0}
+.msg .bubble{background:var(--surface-2);border:1px solid var(--line);border-radius:4px 12px 12px 12px;padding:9px 12px;font-size:13.5px}
+.replybox{display:flex;gap:8px;margin-top:12px}
+.replybox input{flex:1;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;min-width:0}
+.chart{display:flex;align-items:flex-end;gap:8px;height:150px;padding:8px 4px 0}
+.bar{flex:1;background:#CFE7E6;border-radius:7px 7px 4px 4px;min-height:14px;position:relative;border:1px solid #B7D8D6}
+.bar.today{background:var(--accent)}
+.bar span{position:absolute;top:-19px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:700;color:var(--muted)}
+.bar.today span{color:var(--accent-strong)}
+.axis{display:flex;gap:8px;color:var(--muted);font-size:11px;font-weight:600}
+.axis span{flex:1;text-align:center}
+.feed{display:grid;gap:10px;max-height:260px;overflow:auto;padding-right:4px}
+.feeditem{display:flex;gap:10px;font-size:13.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.feeditem time{color:var(--muted);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.setrow{display:flex;align-items:center;gap:12px;padding:11px 2px;border-top:1px solid var(--line)}
+.setrow:first-child{border-top:0}
+.setrow small{display:block;color:var(--muted)}
+select,input[type="text"],input[type="url"],input[type="password"]{font:inherit}
+select{border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:#fff;max-width:100%}
+.form{display:grid;gap:12px}
+.form label{display:grid;gap:6px;font-weight:600;font-size:14px}
+.form input{border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.form .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--muted)}
+.small{font-size:12.5px}
+.error{color:var(--danger)}
+table.data{width:100%;border-collapse:collapse;font-size:13.5px}
+table.data th,table.data td{text-align:left;padding:8px 10px;border-top:1px solid var(--line);vertical-align:top}
+table.data tr:first-child th{border-top:0}
+table.data th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+dl.kv{display:grid;grid-template-columns:180px 1fr;gap:6px 14px;margin:0;font-size:14px}
+dl.kv dt{color:var(--muted);font-weight:600}
+dl.kv dd{margin:0;overflow-wrap:anywhere}
+.toastwrap{position:fixed;right:22px;bottom:22px;display:grid;gap:10px;z-index:60;max-width:min(360px,90vw)}
+.toast{background:#10222B;color:#EAF3F2;border-radius:12px;padding:12px 15px;box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:14px;display:flex;gap:10px;align-items:flex-start}
+.skip{position:absolute;left:-9999px}
+.skip:focus{left:12px;top:12px;z-index:99;background:#fff;padding:10px 14px;border-radius:8px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 13px;font-size:13px;font-weight:600}
+.tab[aria-selected="true"]{background:#10222B;color:#fff;border-color:#10222B}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--muted);font-size:13.5px}
+footer.note{color:var(--muted);font-size:12.5px;margin-top:18px}
+@media(max-width:1024px){.live-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:1fr}}
+@media(max-width:860px){
+  .shell{grid-template-columns:1fr}
+  .side{position:static;height:auto}
+  .nav{flex-direction:row;overflow-x:auto;padding:0 12px 12px}
+  .nav a{white-space:nowrap}
+  .navlabel,.ai-card{display:none}
+  .topbar{padding:12px 16px;flex-wrap:wrap}
+  .content{padding:18px 16px 60px}
+  dl.kv{grid-template-columns:1fr}
+  dl.kv dd{margin-bottom:8px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
 </head>
 <body>
-<div class="layout">
-  <aside class="sidebar">
+<a class="skip" href="#main">Skip to dashboard</a>
+<div class="shell">
+  <aside class="side" aria-label="Primary">
     <div class="brand">
-      <span class="brand-mark" aria-hidden="true"></span>
-      <div><strong>Receptionist</strong><small>ITSpecialists console</small></div>
+      <span class="mark" aria-hidden="true">IT</span>
+      <span><b>ITSpecialists</b><small>AI receptionist · Barrie, ON</small></span>
     </div>
-    <nav id="nav">
-      <button data-view="overview" class="active">Overview</button>
-      <button data-view="calls">Calls</button>
-      <button data-view="messages">Messages</button>
-      <button data-view="config">Config</button>
-      <button data-view="spend">Spend</button>
-      <button data-view="settings">Settings</button>
+    <div class="navlabel">MANAGE</div>
+    <nav class="nav" id="sideNav" aria-label="Dashboard sections">
+      <a href="#overview" class="active">Overview</a>
+      <a href="#calls">Calls <span class="count" id="navCallCount">–</span></a>
+      <a href="#bookings">Bookings</a>
+      <a href="#messages">Messages <span class="count" id="navMsgCount">–</span></a>
+      <a href="#performance">Performance</a>
+      <a href="#spend">Spend</a>
+      <a href="#settings">Settings</a>
     </nav>
-    <div class="conn"><span id="conn-dot" class="dot idle"></span><span id="conn-text">Not connected</span></div>
+    <div class="navlabel">AI AGENT</div>
+    <div class="ai-card">
+      <div class="row"><span class="dot" id="agentDot" aria-hidden="true"></span><b id="agentStateLabel">Receptionist on duty</b></div>
+      <p>Answering in English · FAQs, message taking &amp; booking redirects. Manual takeover any time.</p>
+      <button type="button" data-soon="Manual call takeover">Take over calls</button>
+    </div>
   </aside>
-  <main>
-    <section id="view-overview" class="view active">
-      <div class="view-head"><h1>Overview</h1><button id="btn-refresh" class="btn">Refresh</button></div>
-      <div id="overview-cards" class="cards"></div>
-      <h2>Recent calls</h2>
-      <div id="overview-recent"></div>
-    </section>
-    <section id="view-calls" class="view">
-      <div class="view-head"><h1>Calls</h1><button id="btn-calls-refresh" class="btn">Refresh</button></div>
-      <div class="split">
-        <div id="calls-list" class="list"></div>
-        <div id="call-detail" class="detail"><p class="muted">Select a call to see its transcript.</p></div>
+
+  <div class="main">
+    <header class="topbar">
+      <label class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#51606F" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="globalSearch" type="search" placeholder="Search callers, numbers, messages…" aria-label="Search callers, numbers, messages"></label>
+      <div class="status-pill" role="status"><span class="dot idle" id="connDot" aria-hidden="true"></span><span id="statusText">Not connected</span></div>
+      <div class="userchip"><span class="avatar" aria-hidden="true">IT</span><span class="meta"><b style="font-size:13.5px">Service desk</b><small>ITSpecialists staff</small></span></div>
+    </header>
+
+    <main class="content" id="main">
+      <div class="pagehead" id="overview">
+        <div><h1 id="greetTitle">Good morning</h1><p id="greetSub">Connecting to the receptionist API…</p></div>
+        <span class="sp"></span>
+        <button class="btn" type="button" id="exportBtn">Export day report</button>
+        <a class="btn primary" href="https://itspecialists.ca/booking" target="_blank" rel="noopener">Open booking page</a>
       </div>
-    </section>
-    <section id="view-messages" class="view">
-      <div class="view-head"><h1>Messages</h1><button id="btn-msg-refresh" class="btn">Refresh</button></div>
-      <div id="messages-list"></div>
-    </section>
-    <section id="view-config" class="view">
-      <div class="view-head"><h1>Config</h1><button id="btn-cfg-refresh" class="btn">Refresh</button></div>
-      <dl id="config-list" class="kv"></dl>
-    </section>
-    <section id="view-spend" class="view">
-      <div class="view-head"><h1>Spend</h1><button id="btn-spend-refresh" class="btn">Refresh</button></div>
-      <div id="spend-body"></div>
-    </section>
-    <section id="view-settings" class="view">
-      <div class="view-head"><h1>Settings</h1></div>
-      <form id="settings-form" class="card form">
-        <label>API base URL
-          <input id="set-url" type="url" placeholder="http://127.0.0.1:8090" autocomplete="off">
-        </label>
-        <label>API token
-          <input id="set-token" type="password" placeholder="DASHBOARD_TOKEN from .env" autocomplete="off">
-        </label>
-        <div class="row">
-          <button type="submit" class="btn primary">Save &amp; connect</button>
-          <span id="settings-msg" class="muted"></span>
-        </div>
-        <p class="muted small">Stored only in this browser (localStorage). Point it at your VPS API when the worker moves there.</p>
-      </form>
-    </section>
-  </main>
+
+      <section class="live-strip" aria-label="Key figures">
+        <div class="kpi od-stat"><small>Calls recorded</small><strong id="kpiCalls">–</strong><span class="trend" id="kpiCallsSub">–</span></div>
+        <div class="kpi od-stat"><small>Messages taken</small><strong id="kpiMsgs">–</strong><span class="trend" id="kpiMsgsSub">–</span></div>
+        <div class="kpi od-stat"><small>Twilio balance</small><strong id="kpiBal">–</strong><span class="trend" id="kpiBalSub">–</span></div>
+        <div class="kpi od-stat"><small>Last call</small><strong id="kpiLast" style="font-size:19px">–</strong><span class="trend" id="kpiLastSub">–</span></div>
+      </section>
+
+      <div class="grid2" style="margin-bottom:14px">
+        <section class="card" id="calls" aria-labelledby="callsH">
+          <div class="card-h"><h2 id="callsH">Calls</h2><span class="badge b-soon">Live view · Coming soon</span>
+            <span class="right"><span class="tabs" role="tablist" aria-label="Call filter"><button class="tab" role="tab" aria-selected="true" type="button" data-filter="all">All</button><button class="tab" role="tab" aria-selected="false" type="button" data-filter="message">Messages</button><button class="tab" role="tab" aria-selected="false" type="button" data-filter="transfer">Transfers</button></span><button class="btn small" type="button" id="callsRefresh">Refresh</button></span>
+          </div>
+          <div class="card-b">
+            <div class="empty" style="margin-bottom:10px">Live call monitoring and takeover are <b>coming soon</b>. Recorded calls with transcripts appear below.</div>
+            <div id="callsList"><p class="muted">Loading…</p></div>
+          </div>
+        </section>
+
+        <section class="card" id="bookings" aria-labelledby="bookH">
+          <div class="card-h"><h2 id="bookH">Bookings</h2><span class="badge b-soon">Coming soon</span></div>
+          <div class="card-b">
+            <div class="empty">The receptionist never books directly — callers are sent to <a href="https://itspecialists.ca/booking" target="_blank" rel="noopener">itspecialists.ca/booking</a>. In-dashboard booking management is <b>coming soon</b>.</div>
+          </div>
+        </section>
+      </div>
+
+      <div class="grid2" style="margin-bottom:14px">
+        <section class="card" id="messages" aria-labelledby="msgH">
+          <div class="card-h"><h2 id="msgH">Messages</h2><span class="badge b-queue" id="msgBadge">–</span><span class="right"><button class="btn small" type="button" id="msgRefresh">Refresh</button></span></div>
+          <div class="card-b">
+            <div id="msgList"><p class="muted">Loading…</p></div>
+            <form class="replybox" id="replyForm"><input type="text" id="replyInput" placeholder="Replies are coming soon…" aria-label="Reply (coming soon)" disabled><button class="btn primary soon" type="submit">Send</button></form>
+          </div>
+        </section>
+
+        <section class="card" id="visitors" aria-labelledby="visH">
+          <div class="card-h"><h2 id="visH">Visitor log</h2><span class="badge b-soon">Coming soon</span></div>
+          <div class="card-b">
+            <div class="empty">On-site visitor sign-in is <b>coming soon</b>. The phone receptionist takes messages in the Messages section.</div>
+          </div>
+        </section>
+      </div>
+
+      <div class="grid2" style="margin-bottom:14px">
+        <section class="card" id="performance" aria-labelledby="perfH">
+          <div class="card-h"><h2 id="perfH">Performance · last 5 days</h2><span class="hint">Calls per day</span></div>
+          <div class="card-b">
+            <div class="chart" id="chart" role="img" aria-label="Calls per day chart"></div>
+            <div class="axis" id="axis" aria-hidden="true"></div>
+            <div class="od-grid" style="--od-cols:3;margin-top:14px">
+              <div class="kpi od-stat"><small>Containment</small><strong>–</strong><span class="badge b-soon">Coming soon</span></div>
+              <div class="kpi od-stat"><small>Callback rate</small><strong>–</strong><span class="badge b-soon">Coming soon</span></div>
+              <div class="kpi od-stat"><small>Avg. duration</small><strong id="kpiAvgDur">–</strong></div>
+            </div>
+          </div>
+        </section>
+        <section class="card" aria-labelledby="feedH">
+          <div class="card-h"><h2 id="feedH">AI activity</h2><span class="badge b-live">From API</span></div>
+          <div class="card-b">
+            <div class="feed" id="feed" aria-live="polite"><p class="muted">Loading…</p></div>
+            <div class="setrow od-row"><span class="od-field od-fill"><b>Auto-book when slot is free</b><small>Confirm without asking, within working hours</small></span><span class="badge b-soon od-fixed">Coming soon</span></div>
+            <div class="setrow od-row"><span class="od-field od-fill"><b>Agent language</b><small>Greeting + fallback voice</small></span><span class="badge b-soon od-fixed">Coming soon</span></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="grid2" style="margin-bottom:14px">
+        <section class="card" id="spend" aria-labelledby="spendH">
+          <div class="card-h"><h2 id="spendH">Spend</h2><span class="hint">Twilio · this month</span><span class="right"><button class="btn small" type="button" id="spendRefresh">Refresh</button></span></div>
+          <div class="card-b"><div id="spendBody"><p class="muted">Loading…</p></div></div>
+        </section>
+        <section class="card" id="settings" aria-labelledby="setH">
+          <div class="card-h"><h2 id="setH">Settings</h2><span class="hint">API connection</span></div>
+          <div class="card-b">
+            <form id="settingsForm" class="form">
+              <label>API base URL
+                <input id="setUrl" type="url" placeholder="https://rcp.andresgomez.store" autocomplete="off">
+              </label>
+              <label>API token
+                <input id="setToken" type="password" placeholder="DASHBOARD_TOKEN from .env" autocomplete="off">
+              </label>
+              <div class="row">
+                <button type="submit" class="btn primary">Save &amp; connect</button>
+                <span id="settingsMsg" class="muted small"></span>
+              </div>
+              <p class="muted small">Stored only in this browser (localStorage).</p>
+            </form>
+            <h3 style="font-size:14px;margin:14px 0 6px">Agent config</h3>
+            <dl class="kv" id="configBox"><dt>–</dt><dd class="muted">Connect to load.</dd></dl>
+          </div>
+        </section>
+      </div>
+      <footer class="note" id="footNote">Receptionist console · ITSpecialists. Live data loads from the API after connecting.</footer>
+    </main>
+  </div>
 </div>
-<script src="app.js"></script>
+<div class="toastwrap" id="toasts" aria-live="polite"></div>
+<script>
+(function(){
+"use strict";
+const $=(s,c=document)=>c.querySelector(s);
+const $$=(s,c=document)=>[...c.querySelectorAll(s)];
+const esc=(s)=>String(s??"").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+const store={
+  load(){return{url:localStorage.getItem("rx_api_url")||"https://rcp.andresgomez.store",token:localStorage.getItem("rx_api_token")||""};},
+  save(u,t){localStorage.setItem("rx_api_url",u);localStorage.setItem("rx_api_token",t);}
+};
+async function api(path){
+  const{url,token}=store.load();
+  const res=await fetch(url.replace(/\/$/,"")+path,{headers:token?{Authorization:"Bearer "+token}:{}});
+  if(!res.ok)throw new Error("API "+res.status+" on "+path);
+  return res.json();
+}
+
+const cache={status:null,calls:[],messages:[],spend:null,config:null};
+let callFilter="all";
+
+function toast(msg){const w=$("#toasts");const t=document.createElement("div");t.className="toast";t.innerHTML="<span aria-hidden=\"true\">✓</span><span></span>";t.lastChild.textContent=msg;w.appendChild(t);setTimeout(()=>{t.style.opacity="0";t.style.transition="opacity .3s";setTimeout(()=>t.remove(),320)},3200);}
+function setConn(state,text){$("#connDot").className="dot "+state;$("#statusText").textContent=text;}
+
+const fmtDur=(s)=>s==null?"—":Math.floor(s/60)+"m "+Math.round(s%60)+"s";
+const fmtDate=(iso)=>{if(!iso)return"—";const d=new Date(iso);return isNaN(d)?iso:d.toLocaleString();};
+const fmtDay=(iso)=>{if(!iso)return"—";const d=new Date(iso);return isNaN(d)?iso:d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});};
+const initials=(s)=>String(s||"?").replace(/[^A-Za-z0-9+ ]/g,"").trim().split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase()||"??";
+
+function showNotConnected(){
+  setConn("idle","Set API token first");
+  $("#greetSub").textContent="Enter your API URL and token in Settings to connect.";
+  ["#callsList","#msgList","#feed","#spendBody"].forEach(s=>{$(s).innerHTML="<p class=\"muted\">Not connected — set your API token in Settings.</p>";});
+}
+
+function renderHead(){
+  const h=new Date().getHours();
+  $("#greetTitle").textContent=h<12?"Good morning":h<18?"Good afternoon":"Good evening";
+  const st=cache.status||{};
+  const today=new Date().toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"});
+  $("#greetSub").textContent=today+" · "+(st.calls_recorded??0)+" calls recorded · "+(st.messages_recorded??0)+" messages taken.";
+  $("#navCallCount").textContent=st.calls_recorded??"–";
+  $("#navMsgCount").textContent=st.messages_recorded??"–";
+  $("#footNote").textContent="Receptionist console · "+(st.business_slug||"ITSpecialists")+" · data from "+store.load().url;
+}
+
+function renderKpis(){
+  const st=cache.status||{};
+  $("#kpiCalls").textContent=st.calls_recorded??"–";
+  $("#kpiMsgs").textContent=st.messages_recorded??"–";
+  const sp=cache.spend||{};
+  $("#kpiBal").textContent=sp.balance!=null?"$"+sp.balance.toFixed(2):"–";
+  $("#kpiBalSub").textContent=sp.currency?("Twilio · "+sp.currency):"–";
+  $("#kpiLast").textContent=st.last_call_at?fmtDay(st.last_call_at):"–";
+  $("#kpiLastSub").textContent=st.last_call_at?fmtDate(st.last_call_at):"no calls yet";
+  const today=new Date().toDateString();
+  const nToday=cache.calls.filter(c=>c.start&&new Date(c.start).toDateString()===today).length;
+  $("#kpiCallsSub").textContent=nToday+" today";
+  $("#kpiMsgsSub").textContent=(st.messages_recorded??0)+" total";
+}
+
+function renderCalls(){
+  const box=$("#callsList");
+  if(!cache.calls.length){box.innerHTML="<p class=\"muted\">No calls yet.</p>";return;}
+  box.innerHTML=cache.calls.map((c,i)=>{
+    const out=(c.outcomes||[]).join(", ");
+    const flags=[c.message_taken?"message":"",c.transfer_target?"transfer":""].filter(Boolean).join(" ");
+    const search=[c.caller,c.call_id,out,flags].join(" ").toLowerCase();
+    return "<div class=\"qrow od-row\" data-i=\""+i+"\" data-flags=\""+esc(flags)+"\" data-search=\""+esc(search)+"\">"
+      +"<span class=\"qpip od-fixed\">"+esc(initials(c.caller))+"</span>"
+      +"<span class=\"od-field od-fill\"><b>"+esc(c.caller||"Unknown caller")+(c.message_taken?" <span class=\"badge b-queue\">Message</span>":"")+(c.transfer_target?" <span class=\"badge b-wait\">Transfer</span>":"")+"</b>"
+      +"<small>"+esc(fmtDate(c.start))+" · "+esc(fmtDur(c.duration_seconds))+(out?" · "+esc(out):"")+"</small></span>"
+      +"<span class=\"hint od-fixed small muted\">Transcript ›</span></div>"
+      +"<div class=\"calldetail\" id=\"cd"+i+"\" hidden></div>";
+  }).join("");
+  applyFilters();
+}
+
+async function toggleCallDetail(row){
+  const i=row.dataset.i;
+  const det=$("#cd"+i);
+  const open=det.hidden;
+  $$("#callsList .calldetail").forEach(d=>{d.hidden=true;});
+  if(!open)return;
+  det.hidden=false;
+  if(det.dataset.loaded)return;
+  det.innerHTML="<p class=\"muted\">Loading transcript…</p>";
+  try{
+    const d=await api("/api/calls/"+encodeURIComponent(cache.calls[+i].call_id));
+    const segs=(d.segments||[]).map(s=>"<div><b>"+(s.role==="user"?"Caller:":"Agent:")+"</b> "+esc(s.text)+"</div>").join("")||"<p class=\"muted\">No segments.</p>";
+    det.innerHTML="<div class=\"transcript\">"+segs+"</div>";
+    det.dataset.loaded="1";
+  }catch(e){det.innerHTML="<p class=\"error\">"+esc(e.message)+"</p>";}
+}
+
+function renderMessages(){
+  const box=$("#msgList");
+  const n=cache.messages.length;
+  $("#msgBadge").textContent=n?n+" taken":"none yet";
+  if(!n){box.innerHTML="<p class=\"muted\">No messages taken yet. They appear here when a caller leaves one.</p>";return;}
+  box.innerHTML=cache.messages.map(m=>{
+    const search=[m.caller_name,m.callback_number,m.message].join(" ").toLowerCase();
+    return "<div class=\"msg\" data-search=\""+esc(search)+"\"><span class=\"qpip\">"+esc(initials(m.caller_name))+"</span>"
+      +"<div style=\"flex:1;min-width:0\"><div class=\"od-row\"><b>"+esc(m.caller_name||"Unknown")+"</b><small style=\"color:var(--muted)\">· "+esc(m.callback_number||"no callback")+" · "+esc(fmtDate(m.timestamp))+"</small></div>"
+      +"<div class=\"bubble\">"+esc(m.message||"")+"</div></div></div>";
+  }).join("");
+  applyFilters();
+}
+
+function renderFeed(){
+  const box=$("#feed");
+  const ev=[];
+  cache.calls.slice(0,20).forEach(c=>{if(c.start)ev.push({t:new Date(c.start),html:"Call from <b>"+esc(c.caller||"?")+"</b> — "+esc(fmtDur(c.duration_seconds))+((c.outcomes||[]).length?" · "+esc(c.outcomes.join(", ")):"")});});
+  cache.messages.slice(0,20).forEach(m=>{if(m.timestamp)ev.push({t:new Date(m.timestamp),html:"Message from <b>"+esc(m.caller_name||"?")+"</b> — "+esc(String(m.message||"").slice(0,80))});});
+  ev.sort((a,b)=>b.t-a.t);
+  box.innerHTML=ev.length?ev.slice(0,10).map(e=>"<div class=\"feeditem\"><time>"+esc(e.t.toLocaleDateString(undefined,{month:"short",day:"numeric"}))+" "+esc(e.t.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}))+"</time><span>"+e.html+"</span></div>").join(""):"<p class=\"muted\">No activity yet.</p>";
+}
+
+function renderChart(){
+  const days=[];
+  for(let k=4;k>=0;k--){const d=new Date();d.setDate(d.getDate()-k);days.push(d);}
+  const key=(d)=>d.toDateString();
+  const counts=days.map(d=>cache.calls.filter(c=>c.start&&new Date(c.start).toDateString()===key(d)).length);
+  const max=Math.max(1,...counts);
+  $("#chart").innerHTML=counts.map((n,i)=>"<div class=\"bar"+(i===4?" today":"")+"\" style=\"height:"+Math.max(8,Math.round(n/max*100))+"%\"><span>"+n+"</span></div>").join("");
+  $("#axis").innerHTML=days.map(d=>"<span>"+esc(d.toLocaleDateString(undefined,{weekday:"short"}))+"</span>").join("");
+  const durs=cache.calls.map(c=>c.duration_seconds).filter(v=>v!=null);
+  $("#kpiAvgDur").textContent=durs.length?fmtDur(durs.reduce((a,b)=>a+b,0)/durs.length):"–";
+}
+
+function renderSpend(){
+  const box=$("#spendBody");
+  const s=cache.spend||{};
+  if(s.error){box.innerHTML="<p class=\"error\">"+esc(s.error)+"</p>";return;}
+  if(s.balance==null){box.innerHTML="<p class=\"muted\">No spend data.</p>";return;}
+  const rows=(s.month_categories||[]).map(c=>"<tr><td>"+esc(c.category)+"</td><td>"+esc(c.used)+" "+esc(c.unit)+"</td><td>$"+esc(Number(c.price).toFixed(4))+"</td></tr>").join("");
+  box.innerHTML="<div class=\"kpi od-stat\" style=\"margin-bottom:12px\"><small>Twilio balance ("+esc(s.currency||"")+")</small><strong>$"+esc(s.balance.toFixed(2))+"</strong></div>"
+    +(rows?"<table class=\"data\"><tr><th>Category</th><th>Used</th><th>Cost</th></tr>"+rows+"</table>":"<p class=\"muted\">No usage recorded this month.</p>");
+}
+
+function renderConfig(){
+  const box=$("#configBox");
+  const c=cache.config;
+  if(!c){box.innerHTML="<dt>–</dt><dd class=\"muted\">Connect to load.</dd>";return;}
+  const rows=[["Business",c.business+" ("+(c.type||"")+")"],["Timezone",c.timezone],["Voice model",c.model],["Voice",c.voice],["Languages",(c.languages||[]).join(", ")],["FAQs",c.faqs],["Transfer targets",c.transfers],["Greeting",c.greeting]];
+  box.innerHTML=rows.map(([k,v])=>"<dt>"+esc(k)+"</dt><dd>"+esc(v)+"</dd>").join("");
+}
+
+function applyFilters(){
+  const q=($("#globalSearch").value||"").toLowerCase().trim();
+  $$("#callsList .qrow").forEach(r=>{
+    const okF=callFilter==="all"||(r.dataset.flags||"").includes(callFilter);
+    const okQ=!q||(r.dataset.search||"").includes(q);
+    r.style.display=okF&&okQ?"":"none";
+    const det=r.nextElementSibling;
+    if(det&&det.classList.contains("calldetail")&&r.style.display==="none")det.hidden=true;
+  });
+  $$("#msgList .msg").forEach(r=>{r.style.display=!q||(r.dataset.search||"").includes(q)?"":"none";});
+}
+
+async function loadAll(){
+  setConn("idle","Connecting…");
+  const res=await Promise.allSettled([api("/api/status"),api("/api/calls?limit=200"),api("/api/messages?limit=50"),api("/api/spend"),api("/api/config")]);
+  const val=(i)=>res[i].status==="fulfilled"?res[i].value:null;
+  const fail=res.find(r=>r.status==="rejected");
+  if(fail){setConn("err","Connection failed");toast("API error: "+fail.reason.message);return;}
+  cache.status=val(0);cache.calls=val(1).calls||[];cache.messages=val(2).messages||[];cache.spend=val(3);cache.config=val(4);
+  setConn("ok","Connected");
+  renderHead();renderKpis();renderCalls();renderMessages();renderFeed();renderChart();renderSpend();renderConfig();
+}
+
+function download(name,text){
+  if(typeof URL==="undefined"||!URL.createObjectURL){toast("Export not available in this browser.");return;}
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([text],{type:"text/csv"}));
+  a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+}
+function exportCSV(){
+  if(!cache.calls.length&&!cache.messages.length){toast("Nothing to export yet.");return;}
+  const q=(v)=>"\""+String(v??"").replace(/"/g,"\"\"")+"\"";
+  let out="type,when,caller,callback,duration_s,detail\n";
+  cache.calls.forEach(c=>{out+=["call",c.start,c.caller,"",c.duration_seconds,(c.outcomes||[]).join("|")].map(q).join(",")+"\n";});
+  cache.messages.forEach(m=>{out+=["message",m.timestamp,m.caller_name,m.callback_number,"",m.message].map(q).join(",")+"\n";});
+  const day=new Date().toISOString().slice(0,10);
+  download("itspecialists-day-"+day+".csv",out);
+  toast("Day report exported ("+(cache.calls.length+cache.messages.length)+" rows).");
+}
+
+// Events
+document.addEventListener("click",e=>{
+  const soon=e.target.closest("[data-soon]");
+  if(soon){toast(soon.dataset.soon+" — coming soon.");return;}
+  const tab=e.target.closest(".tab");
+  if(tab){$$(".tab").forEach(x=>x.setAttribute("aria-selected","false"));tab.setAttribute("aria-selected","true");callFilter=tab.dataset.filter;applyFilters();return;}
+  const row=e.target.closest("#callsList .qrow");
+  if(row){toggleCallDetail(row);}
+});
+$("#globalSearch").addEventListener("input",applyFilters);
+$("#callsRefresh").addEventListener("click",async()=>{try{cache.calls=(await api("/api/calls?limit=200")).calls||[];renderCalls();renderChart();toast("Calls refreshed.");}catch(e){toast(e.message);}});
+$("#msgRefresh").addEventListener("click",async()=>{try{cache.messages=(await api("/api/messages?limit=50")).messages||[];renderMessages();toast("Messages refreshed.");}catch(e){toast(e.message);}});
+$("#spendRefresh").addEventListener("click",async()=>{try{cache.spend=await api("/api/spend");renderSpend();renderKpis();toast("Spend refreshed.");}catch(e){toast(e.message);}});
+$("#exportBtn").addEventListener("click",exportCSV);
+$("#replyForm").addEventListener("submit",e=>{e.preventDefault();toast("Replies — coming soon.");});
+$("#settingsForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  store.save($("#setUrl").value.trim(),$("#setToken").value.trim());
+  $("#settingsMsg").textContent="Saved. Connecting…";
+  try{await api("/api/status");$("#settingsMsg").textContent="Connected.";loadAll();}
+  catch(err){$("#settingsMsg").textContent="Failed: "+err.message;setConn("err","Connection failed");}
+});
+
+// Side nav active section
+(function(){
+  if(!("IntersectionObserver" in window))return;
+  const links=$$("#sideNav a");
+  const secs=["overview","calls","bookings","messages","performance","spend","settings"].map(id=>document.getElementById(id));
+  const io=new IntersectionObserver(es=>{es.forEach(x=>{if(x.isIntersecting){links.forEach(l=>l.classList.toggle("active",l.getAttribute("href")==="#"+x.target.id));}});},{rootMargin:"-40% 0px -55% 0px"});
+  secs.forEach(s=>s&&io.observe(s));
+})();
+
+// Init
+(function(){
+  const{url,token}=store.load();
+  $("#setUrl").value=url;$("#setToken").value=token;
+  const h=new Date().getHours();
+  $("#greetTitle").textContent=h<12?"Good morning":h<18?"Good afternoon":"Good evening";
+  if(token)loadAll();
+  else showNotConnected();
+})();
+})();
+</script>
 </body>
 </html>
