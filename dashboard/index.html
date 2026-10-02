@@ -50,6 +50,7 @@ a{color:var(--accent-strong)}
 button{font:inherit;cursor:pointer}
 :focus-visible{outline:3px solid #0E7C7B;outline-offset:2px;border-radius:6px}
 .shell{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:100vh}
+.side,.main,.nav{min-width:0}
 /* Sidebar */
 .side{background:#10222B;color:#EAF2F2;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
 .brand{display:flex;align-items:center;gap:12px;padding:20px 18px 16px}
@@ -163,10 +164,10 @@ dl.kv dd{margin:0;overflow-wrap:anywhere}
 .tab[aria-selected="true"]{background:#10222B;color:#fff;border-color:#10222B}
 .empty{border:1px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--muted);font-size:13.5px}
 footer.note{color:var(--muted);font-size:12.5px;margin-top:18px}
-@media(max-width:1024px){.live-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:1fr}}
+@media(max-width:1024px){.live-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:860px){
   body{font-size:14px}
-  .shell{grid-template-columns:1fr}
+  .shell{grid-template-columns:minmax(0,1fr)}
   .side{position:static;height:auto}
   .brand{padding:14px 16px 10px}
   .nav{flex-direction:row;overflow-x:auto;padding:0 12px 12px}
