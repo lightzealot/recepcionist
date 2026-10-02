@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Normalizes the AIReceptionist webhook payload.\n// Input: { message: {...}, context: {...} }\nconst b = $input.first().json;\nreturn [{ json: {\n  caller_name: b.message?.caller_name ?? \"\",\n  callback_number: b.message?.callback_number ?? \"\",\n  message: b.message?.message ?? \"\",\n  business: b.message?.business_name ?? \"\",\n  timestamp: b.message?.timestamp ?? \"\",\n  call_id: b.context?.call_id ?? null\n}}];"
+        "jsCode": "// Normalizes the AIReceptionist webhook payload.\n// Input: { message: {...}, context: {...} }\nconst b = $input.first().json;\nreturn [{ json: {\n  caller_name: b.message?.caller_name ?? \"\",\n  caller_company: b.message?.caller_company ?? \"\",\n  callback_number: b.message?.callback_number ?? \"\",\n  caller_phone: b.message?.caller_phone ?? \"\",\n  message: b.message?.message ?? \"\",\n  business: b.message?.business_name ?? \"\",\n  timestamp: b.message?.timestamp ?? \"\",\n  call_id: b.context?.call_id ?? null\n}}];"
       },
       "id": "code-normalize",
       "name": "Normalize message",

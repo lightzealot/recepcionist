@@ -500,9 +500,11 @@ function renderMessages(){
   $("#msgBadge").textContent=n?n+" taken":"none yet";
   if(!n){box.innerHTML="<p class=\"muted\">No messages taken yet. They appear here when a caller leaves one.</p>";return;}
   box.innerHTML=cache.messages.map(m=>{
-    const search=[m.caller_name,m.callback_number,m.message].join(" ").toLowerCase();
+    const search=[m.caller_name,m.caller_company,m.callback_number,m.caller_phone,m.message].join(" ").toLowerCase();
+    const sub=[m.caller_company||"",m.callback_number||"no callback",fmtDate(m.timestamp)].filter(Boolean).join(" · ");
+    const fromLine=m.caller_phone&&m.caller_phone!==m.callback_number?"<small style=\"color:var(--muted)\">Called from "+esc(m.caller_phone)+"</small>":"";
     return "<div class=\"msg\" data-search=\""+esc(search)+"\"><span class=\"qpip\">"+esc(initials(m.caller_name))+"</span>"
-      +"<div style=\"flex:1;min-width:0\"><div class=\"od-row\"><b>"+esc(m.caller_name||"Unknown")+"</b><small style=\"color:var(--muted)\">· "+esc(m.callback_number||"no callback")+" · "+esc(fmtDate(m.timestamp))+"</small></div>"
+      +"<div style=\"flex:1;min-width:0\"><div class=\"od-row\"><b>"+esc(m.caller_name||"Unknown")+"</b><small style=\"color:var(--muted)\">· "+esc(sub)+"</small></div>"+fromLine
       +"<div class=\"bubble\">"+esc(m.message||"")+"</div></div></div>";
   }).join("");
   applyFilters();

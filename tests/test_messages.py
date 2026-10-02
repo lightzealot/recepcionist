@@ -21,4 +21,17 @@ def test_message_to_dict_roundtrip():
         "message": "Call me",
         "business_name": "Acme",
         "timestamp": "2026-01-01T00:00:00+00:00",
+        "caller_company": "",
+        "caller_phone": "",
     }
+
+
+def test_message_carries_company_and_caller_id():
+    msg = Message(
+        "Jane", "+15551112222", "Call me", "Acme",
+        caller_company="Globex", caller_phone="+15550009999",
+        timestamp="2026-01-01T00:00:00+00:00",
+    )
+    d = msg.to_dict()
+    assert d["caller_company"] == "Globex"
+    assert d["caller_phone"] == "+15550009999"

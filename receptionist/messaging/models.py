@@ -12,6 +12,10 @@ class Message:
     message: str
     business_name: str
     timestamp: str = ""
+    # Company the caller is calling from (asked by the agent, B2B triage).
+    caller_company: str = ""
+    # ANI caller ID captured from the SIP leg (may differ from callback).
+    caller_phone: str = ""
 
     def __post_init__(self):
         if not self.timestamp:

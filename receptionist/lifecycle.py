@@ -7,6 +7,7 @@ from typing import Any
 from receptionist.config import BusinessConfig
 from receptionist.email.summarizer import generate_call_summary
 from receptionist.intakes.models import IntakeSubmission
+from receptionist.known_callers import lookup_known_caller
 from receptionist.messaging.models import DispatchContext, Message
 from receptionist.recording.egress import (
     RecordingArtifact, RecordingHandle, start_recording, stop_recording,
@@ -68,6 +69,9 @@ class CallLifecycle:
         # handler then invokes it again on natural disconnect. The second
         # call must be a no-op or operators receive duplicate emails.
         self._finalized: bool = False
+        # Company recognized from the known-caller directory (None when the
+        # number is unknown or caller ID arrived after the greeting).
+        self.known_company: str | None = None
 
     def _build_email_channels(self) -> list:
         """Pre-construct EmailChannel instances when email triggers will need them.
@@ -91,6 +95,27 @@ class CallLifecycle:
     def set_caller_phone(self, phone: str) -> None:
         if phone and self.metadata.caller_phone is None:
             self.metadata.caller_phone = phone
+
+    def resolve_known_company(self) -> str | None:
+        """Match caller ID against the known-caller directory (first hit wins).
+
+        Safe to call repeatedly: once a company is recognized it sticks for
+        the rest of the call, and unknown numbers simply stay None.
+        """
+        if self.known_company is None and self.metadata.caller_phone:
+            hit = lookup_known_caller(
+                self.metadata.caller_phone, self.config.business.name,
+            )
+            if hit is not None:
+                self.known_company = hit.company
+                logger.info(
+                    "callerid: recognized known company",
+                    extra={
+                        "call_id": self.metadata.call_id,
+                        "component": "agent.callerid",
+                    },
+                )
+        return self.known_company
 
     def record_faq_answered(self, question: str) -> None:
         self.metadata.faqs_answered.append(question)

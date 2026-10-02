@@ -582,6 +582,8 @@ _SIP_IDENTITY_PHONE_RE = re.compile(r"^sip_(\+?\d{7,15})$", re.IGNORECASE)
 _TRUNCATE_LIMITS = {
     "caller_name": 200,
     "callback_number": 50,
+    "caller_company": 200,
+    "caller_phone": 50,
     "message": 4000,
     "notes": 1000,
     "caller_email": 254,
@@ -996,6 +998,7 @@ def _capture_caller_phone_from_participant(
             )
         else:
             logger.info("callerid: captured caller phone", extra=extra)
+            lifecycle.resolve_known_company()
         return
     logger.info(
         "callerid: no phone resolvable from participant identity=%r attrs_keys=%s",
@@ -1016,8 +1019,9 @@ _KEYPAD_VOICE_FALLBACK = (
 
 _DTMF_TAKE_MESSAGE_INSTRUCTIONS = (
     "Briefly acknowledge that you will take a message. Then ask "
-    "for the caller's name, their callback number, and what they "
-    "need. Then call take_message with that information."
+    "for the caller's name, the company they are calling from, their "
+    "callback number, and what they need. Then call take_message with "
+    "that information."
 )
 
 
@@ -1177,8 +1181,8 @@ async def _dispatch_dtmf_event(event, state: _DtmfHandlerState) -> None:
                     instructions=(
                         "Say: 'This line cannot transfer calls, but I can take a "
                         "message and have someone call you back.' Then ask for "
-                        "the caller's name, callback number, and what they need. "
-                        "Then call take_message."
+                        "the caller's name, the company they are calling from, "
+                        "callback number, and what they need. Then call take_message."
                     ),
                 )
             else:
@@ -1191,7 +1195,8 @@ async def _dispatch_dtmf_event(event, state: _DtmfHandlerState) -> None:
                     instructions=(
                         "Say: 'I'm having trouble transferring that call. Let me "
                         "take a message instead.' Then ask for the caller's name, "
-                        "callback number, and what they need. Then call take_message."
+                        "the company they are calling from, callback number, and "
+                        "what they need. Then call take_message."
                     ),
                 )
         elif action_cfg.action == "take_message":
@@ -1369,10 +1374,21 @@ class Receptionist(Agent):
             )
 
         greeting_text = self.config.greeting
-        await self.session.generate_reply(
-            instructions=f"""Greet the caller with:
+        company = self.lifecycle.resolve_known_company()
+        if company:
+            await self.session.generate_reply(
+                instructions=f"""Greet the caller with:
+{greeting_text}
+
+The calling number is recognized as {company}. Acknowledge them as
+calling from {company} and lightly confirm it (numbers can be shared
+or reassigned). Do NOT ask which company they are calling from."""
+            )
+        else:
+            await self.session.generate_reply(
+                instructions=f"""Greet the caller with:
 {greeting_text}"""
-        )
+            )
 
     @function_tool()
     async def lookup_faq(self, ctx: RunContext, question: str) -> str:
@@ -1496,18 +1512,33 @@ class Receptionist(Agent):
 
     @function_tool()
     async def take_message(
-        self, ctx: RunContext, caller_name: str, message: str, callback_number: str
+        self, ctx: RunContext, caller_name: str, message: str,
+        callback_number: str, caller_company: str = "",
     ) -> str:
-        """Take a message from the caller."""
+        """Take a message from the caller.
+
+        Ask the caller for their name, the company they are calling from,
+        a callback number, and what the message is about.
+        """
         call_id = self.lifecycle.metadata.call_id
         caller_name = _cap("caller_name", caller_name, call_id=call_id) or ""
         message = _cap("message", message, call_id=call_id) or ""
         callback_number = _cap("callback_number", callback_number, call_id=call_id) or ""
+        if not (caller_company or "").strip():
+            # Recognized number: the agent was told not to ask, so prefill.
+            caller_company = self.lifecycle.known_company or ""
+        caller_company = _cap("caller_company", caller_company, call_id=call_id) or ""
+        # ANI caller ID comes from the SIP leg, never from the model.
+        caller_phone = _cap(
+            "caller_phone", self.lifecycle.metadata.caller_phone, call_id=call_id,
+        ) or ""
         msg = Message(
             caller_name=caller_name,
             callback_number=callback_number,
             message=message,
             business_name=self.config.business.name,
+            caller_company=caller_company,
+            caller_phone=caller_phone,
         )
         try:
             # Email portion is deferred to call-end so the message email can
@@ -2453,6 +2484,9 @@ async def handle_call(ctx: agents.JobContext):
         _capture_caller_phone_from_participant(
             lifecycle, participant, source="initial_scan",
         )
+    # Recognize the company before the greeting whenever caller ID is
+    # already available (late ANI still resolves via the capture above).
+    lifecycle.resolve_known_company()
 
     idle_cfg = config.voice.idle
     realtime_kwargs = _build_realtime_model_kwargs(

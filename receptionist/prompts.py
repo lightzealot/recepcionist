@@ -119,7 +119,8 @@ def _build_intakes_block(config: BusinessConfig) -> str:
         "If the caller says they don't have time, want a callback instead,\n"
         "or want to speak to a person mid-intake, stop calling\n"
         "record_intake_answer. Use take_message immediately with at least\n"
-        "their name and callback number, and note in the message that the\n"
+        "their name, company, and callback number, and note in the\n"
+        "message that the\n"
         "intake was started but not completed.\n"
     )
     if config.intakes.has_dtmf_questions():
@@ -288,7 +289,7 @@ IMPORTANT RULES:
   follow-up.
 - Ask whether the caller is ready before starting a structured intake.
 - If the caller is not ready or needs a person, use take_message with their
-  name, callback number, and what they need.
+  name, company, callback number, and what they need.
 - Never remain silent after using a tool. Immediately tell the caller the result or the next step out loud.
 """
 
@@ -307,7 +308,7 @@ DEPARTMENTS YOU CAN TRANSFER TO:
 {routing_block}
 
 When a caller asks to be transferred, use the transfer_call tool with the department name.
-When a caller wants to leave a message, use the take_message tool to record their name, message, and callback number.
+When a caller wants to leave a message, use the take_message tool to record their name, the company they are calling from, message, and callback number.
 When asked about business hours, use the get_business_hours tool.
 {calendar_block}{intakes_block}{info_packets_block}{dtmf_block}
 ENDING CALLS:

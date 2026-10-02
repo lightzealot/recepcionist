@@ -25,8 +25,8 @@ const canned = {
   "/api/calls/c1": { metadata: { caller_phone: "+15550001111" },
     segments: [{ role: "agent", text: "Hello" }, { role: "user", text: "Hi" }] },
   "/api/messages?limit=50": { messages: [
-    { caller_name: "Andrew", callback_number: "+15550001111",
-      message: "Call me back", timestamp: NOW },
+    { caller_name: "Andrew", caller_company: "Acme Corp", callback_number: "+15550001111",
+      caller_phone: "+15550009999", message: "Call me back", timestamp: NOW },
   ]},
   "/api/spend": { balance: 19.98, currency: "USD",
     month_categories: [{ category: "cat", used: "2", unit: "min", price: 0.01 }] },
@@ -108,6 +108,8 @@ const assert = (cond, msg) => {
   assert(documentStub.documentElement.getAttribute("data-theme") === "ledger", "saved theme applied on init");
   assert(byId.kpiCalls.textContent === "2", "KPI calls rendered (2)");
   assert(byId.msgList.innerHTML.includes("Andrew"), "message rendered");
+  assert(byId.msgList.innerHTML.includes("Acme Corp"), "message company rendered");
+  assert(byId.msgList.innerHTML.includes("Called from"), "caller-ID line rendered");
   assert((byId.chart.innerHTML.match(/class="bar/g) || []).length === 5, "chart has 5 bars");
   assert(byId.feed.innerHTML.includes("Call from"), "activity feed rendered");
   assert(byId.spendBody.innerHTML.includes("19.98"), "spend rendered");
