@@ -33,6 +33,11 @@ const canned = {
   "/api/config": { business: "ITSpecialists", type: "MSP", timezone: "America/Toronto",
     model: "gpt-realtime-2.1-mini", voice: "marin", languages: ["en"],
     faqs: 16, transfers: 0, greeting: "Hello" },
+  "/api/known-callers": { callers: [
+    { phone: "7054810426", company: "Harmony Dental", contact: "" },
+  ]},
+  "/api/test-call": { room: "test-9", caller_phone: "7054810426",
+    url: "https://meet.livekit.io/custom?liveKitUrl=wss://x&token=t", token: "t" },
 };
 const seenAuth = [];
 async function fetchStub(url, opts) {
@@ -133,6 +138,18 @@ const assert = (cond, msg) => {
   // interaction: CSV export must not throw (download guarded)
   byId.exportBtn._h.click();
   assert(true, "export click handled without throwing");
+
+  // test-call flow: known callers populate the select, submit shows join link
+  assert(byId.testCaller.innerHTML.includes("Harmony Dental"), "test caller select populated");
+  const tRes = documentStub.querySelector("#testResult");
+  assert(tRes.hidden === true, "test result hidden before submit");
+  byId.testForm._h.submit({ preventDefault() {} });
+  for (let i = 0; i < 100 && tRes.hidden !== false; i++)
+    await new Promise((r) => setImmediate(r));
+  assert(tRes.hidden === false, "test result shown after submit");
+  assert(byId.testUrl.value.includes("meet.livekit.io"), "join link rendered");
+  assert(byId.testRoom.textContent === "test-9", "test room rendered");
+  assert(byId.testStart.disabled === false, "test button re-enabled");
 
   console.log("SMOKE PASS");
 })().catch((e) => { console.error("FAIL:", e); process.exit(1); });

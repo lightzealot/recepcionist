@@ -28,6 +28,7 @@ load_dotenv(Path(__file__).parent / ".env")
 from fastapi import Depends, FastAPI, HTTPException  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer  # noqa: E402
+from pydantic import BaseModel  # noqa: E402
 
 ROOT = Path(__file__).parent
 STARTED = time.time()
@@ -37,13 +38,17 @@ HOST = os.environ.get("DASHBOARD_HOST", "127.0.0.1")
 PORT = int(os.environ.get("DASHBOARD_PORT", "8090"))
 CORS = [o.strip() for o in os.environ.get("DASHBOARD_CORS_ORIGINS", "*").split(",")]
 SLUG = os.environ.get("RECEPTIONIST_CONFIG", "test-itspecialists")
+# Same default as receptionist.agent.DEFAULT_AGENT_NAME (kept local so this
+# sidecar doesn't import the heavy agent module).
+AGENT_NAME = os.environ.get("RECEPTIONIST_AGENT_NAME", "receptionist")
+LIVEKIT_URL = os.environ.get("LIVEKIT_URL", "")
 
 app = FastAPI(title="AIReceptionist dashboard API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS,
     allow_credentials=True,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["Authorization", "Content-Type"],
 )
 auth = HTTPBearer(auto_error=False)
@@ -155,6 +160,81 @@ def config_summary() -> dict:
         "transfers": len(c.routing),
         "greeting": c.greeting,
     }
+
+
+@app.get("/api/known-callers", dependencies=[Depends(require_token)])
+def known_callers() -> dict:
+    from receptionist.known_callers import load_known_callers
+
+    return {
+        "callers": [
+            {"phone": c.phone, "company": c.company, "contact": c.contact}
+            for c in load_known_callers()
+        ],
+    }
+
+
+class TestCallRequest(BaseModel):
+    caller_phone: str = ""
+    caller_name: str = "Test caller"
+    dry_run: bool = False
+
+
+@app.post("/api/test-call", dependencies=[Depends(require_token)])
+async def test_call(req: TestCallRequest) -> dict:
+    """Spin up a dashboard test room with the agent dispatched into it.
+
+    Returns a browser join URL (open it on a phone: the Mac mini has no
+    mic). `caller_phone` simulates that caller ID so the known-caller
+    greeting can be verified without the real phones. `dry_run` validates
+    everything without dispatching (costs $0; a real dispatch runs the
+    voice model at ~$0.03/min once the agent joins).
+    """
+    import re
+    from datetime import timedelta
+    from urllib.parse import quote
+
+    phone = req.caller_phone.strip()
+    if phone and not re.fullmatch(r"\+?[0-9][0-9 .()/-]{5,25}", phone):
+        raise HTTPException(400, "invalid caller_phone")
+    if not LIVEKIT_URL:
+        raise HTTPException(500, "LIVEKIT_URL not configured")
+    room = f"test-{int(time.time())}"
+    if req.dry_run:
+        return {"room": room, "dry_run": True, "agent": AGENT_NAME,
+                "caller_phone": phone or None}
+
+    from livekit import api as lkapi
+
+    metadata = json.dumps({"config": SLUG, "test_caller_phone": phone})
+    client = lkapi.LiveKitAPI()
+    try:
+        await client.agent_dispatch.create_dispatch(
+            lkapi.CreateAgentDispatchRequest(
+                room=room, agent_name=AGENT_NAME, metadata=metadata,
+            )
+        )
+    except Exception as e:  # noqa: BLE001 - surface dispatch errors as 502
+        raise HTTPException(502, f"dispatch failed: {type(e).__name__}: {e}")
+    finally:
+        await client.aclose()
+
+    key = os.environ.get("LIVEKIT_API_KEY", "")
+    secret = os.environ.get("LIVEKIT_API_SECRET", "")
+    if not key or not secret:
+        raise HTTPException(500, "LIVEKIT_API_KEY/SECRET not configured")
+    token = (
+        lkapi.AccessToken(key, secret)
+        .with_identity("test-caller")
+        .with_name(req.caller_name.strip() or "Test caller")
+        .with_grants(lkapi.VideoGrants(room_join=True, room=room))
+        .with_ttl(timedelta(minutes=15))
+        .to_jwt()
+    )
+    url = (f"https://meet.livekit.io/custom?liveKitUrl={quote(LIVEKIT_URL)}"
+           f"&token={quote(token)}")
+    return {"room": room, "url": url, "token": token,
+            "caller_phone": phone or None}
 
 
 @app.get("/api/spend", dependencies=[Depends(require_token)])

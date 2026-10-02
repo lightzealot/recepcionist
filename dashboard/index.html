@@ -266,6 +266,7 @@ footer.note{color:var(--muted);font-size:12.5px;margin-top:18px}
       <a href="#messages">Messages <span class="count" id="navMsgCount">–</span></a>
       <a href="#performance">Performance</a>
       <a href="#spend">Spend</a>
+      <a href="#testcall">Test call</a>
       <a href="#settings">Settings</a>
     </nav>
     <div class="navlabel">AI AGENT</div>
@@ -357,6 +358,27 @@ footer.note{color:var(--muted);font-size:12.5px;margin-top:18px}
         </section>
       </div>
 
+      <section class="card" id="testcall" aria-labelledby="testH" style="margin-bottom:14px">
+        <div class="card-h"><h2 id="testH">Test call</h2><span class="badge b-live">Live</span><span class="hint">Browser voice test · ~$0.03/min while talking</span></div>
+        <div class="card-b">
+          <form id="testForm" class="form">
+            <label>Simulate caller
+              <select id="testCaller"><option value="">Unknown caller</option></select>
+            </label>
+            <p class="muted small">Pick a known company to hear its personalized greeting. The agent joins a private test room.</p>
+            <div class="row">
+              <button type="submit" class="btn primary" id="testStart">Start test call</button>
+              <span id="testMsg" class="muted small"></span>
+            </div>
+          </form>
+          <div id="testResult" hidden>
+            <div class="setrow od-row"><span class="od-field od-fill"><b>Join link (expires in 15 min)</b><small>Open it in the phone browser — this PC has no mic.</small></span></div>
+            <div class="replybox" style="margin-top:0"><input type="text" id="testUrl" readonly aria-label="Test call join link"><button class="btn small" type="button" id="testCopy">Copy</button></div>
+            <p class="muted small" style="margin-top:8px">Room <span id="testRoom"></span> · hang up from the browser tab when done.</p>
+          </div>
+        </div>
+      </section>
+
       <div class="grid2" style="margin-bottom:14px">
         <section class="card" id="spend" aria-labelledby="spendH">
           <div class="card-h"><h2 id="spendH">Spend</h2><span class="hint">Twilio · this month</span><span class="right"><button class="btn small" type="button" id="spendRefresh">Refresh</button></span></div>
@@ -410,8 +432,14 @@ async function api(path){
   if(!res.ok)throw new Error("API "+res.status+" on "+path);
   return res.json();
 }
+async function apiPost(path,body){
+  const{url,token}=store.load();
+  const res=await fetch(url.replace(/\/$/,"")+path,{method:"POST",headers:Object.assign({"Content-Type":"application/json"},token?{Authorization:"Bearer "+token}:{}),body:JSON.stringify(body||{})});
+  if(!res.ok)throw new Error("API "+res.status+" on "+path);
+  return res.json();
+}
 
-const cache={status:null,calls:[],messages:[],spend:null,config:null};
+const cache={status:null,calls:[],messages:[],spend:null,config:null,callers:[]};
 let callFilter="all";
 
 function toast(msg){const w=$("#toasts");const t=document.createElement("div");t.className="toast";t.innerHTML="<span aria-hidden=\"true\">✓</span><span></span>";t.lastChild.textContent=msg;w.appendChild(t);setTimeout(()=>{t.style.opacity="0";t.style.transition="opacity .3s";setTimeout(()=>t.remove(),320)},3200);}
@@ -541,6 +569,39 @@ function renderSpend(){
     +(rows?"<div class=\"tablewrap\"><table class=\"data\"><tr><th>Category</th><th>Used</th><th>Cost</th></tr>"+rows+"</table></div>":"<p class=\"muted\">No usage recorded this month.</p>");
 }
 
+function renderTestCallers(){
+  const sel=$("#testCaller");
+  if(!sel)return;
+  sel.innerHTML="<option value=\"\">Unknown caller</option>"+cache.callers.map(c=>"<option value=\""+esc(c.phone)+"\">"+esc(c.company)+" · "+esc(c.phone)+"</option>").join("");
+}
+
+async function submitTestCall(e){
+  e.preventDefault();
+  const btn=$("#testStart"),msg=$("#testMsg");
+  btn.disabled=true;msg.textContent="Creating room…";
+  $("#testResult").hidden=true;
+  try{
+    const r=await apiPost("/api/test-call",{caller_phone:$("#testCaller").value});
+    $("#testUrl").value=r.url;
+    $("#testRoom").textContent=r.room;
+    $("#testResult").hidden=false;
+    msg.textContent="Agent dispatched — join within 15 min.";
+    toast("Test room ready.");
+  }catch(err){msg.textContent="Failed: "+err.message;}
+  btn.disabled=false;
+}
+
+function copyTestUrl(){
+  const input=$("#testUrl");
+  const done=()=>toast("Link copied.");
+  if(typeof navigator!=="undefined"&&navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(input.value).then(done,()=>toast("Copy failed — long-press the link."));
+    return;
+  }
+  try{input.select();document.execCommand("copy");done();}
+  catch(e){toast("Copy failed — long-press the link.");}
+}
+
 function renderConfig(){
   const box=$("#configBox");
   const c=cache.config;
@@ -563,13 +624,13 @@ function applyFilters(){
 
 async function loadAll(){
   setConn("idle","Connecting…");
-  const res=await Promise.allSettled([api("/api/status"),api("/api/calls?limit=200"),api("/api/messages?limit=50"),api("/api/spend"),api("/api/config")]);
+  const res=await Promise.allSettled([api("/api/status"),api("/api/calls?limit=200"),api("/api/messages?limit=50"),api("/api/spend"),api("/api/config"),api("/api/known-callers")]);
   const val=(i)=>res[i].status==="fulfilled"?res[i].value:null;
   const fail=res.find(r=>r.status==="rejected");
   if(fail){setConn("err","Connection failed");toast("API error: "+fail.reason.message);return;}
-  cache.status=val(0);cache.calls=val(1).calls||[];cache.messages=val(2).messages||[];cache.spend=val(3);cache.config=val(4);
+  cache.status=val(0);cache.calls=val(1).calls||[];cache.messages=val(2).messages||[];cache.spend=val(3);cache.config=val(4);cache.callers=(val(5)||{}).callers||[];
   setConn("ok","Connected");
-  renderHead();renderKpis();renderCalls();renderMessages();renderFeed();renderChart();renderSpend();renderConfig();
+  renderHead();renderKpis();renderCalls();renderMessages();renderFeed();renderChart();renderSpend();renderConfig();renderTestCallers();
 }
 
 function download(name,text){
@@ -605,6 +666,8 @@ $("#msgRefresh").addEventListener("click",async()=>{try{cache.messages=(await ap
 $("#spendRefresh").addEventListener("click",async()=>{try{cache.spend=await api("/api/spend");renderSpend();renderKpis();toast("Spend refreshed.");}catch(e){toast(e.message);}});
 $("#exportBtn").addEventListener("click",exportCSV);
 $("#replyForm").addEventListener("submit",e=>{e.preventDefault();toast("Replies — coming soon.");});
+$("#testForm").addEventListener("submit",submitTestCall);
+$("#testCopy").addEventListener("click",copyTestUrl);
 document.addEventListener("change",e=>{
   const r=e.target&&e.target.closest?e.target.closest('input[name="theme"]'):null;
   if(r){applyTheme(r.value);toast("Theme: "+r.value+".");}
@@ -621,7 +684,7 @@ $("#settingsForm").addEventListener("submit",async e=>{
 (function(){
   if(!("IntersectionObserver" in window))return;
   const links=$$("#sideNav a");
-  const secs=["overview","calls","bookings","messages","performance","spend","settings"].map(id=>document.getElementById(id));
+  const secs=["overview","calls","bookings","messages","performance","spend","testcall","settings"].map(id=>document.getElementById(id));
   const io=new IntersectionObserver(es=>{es.forEach(x=>{if(x.isIntersecting){links.forEach(l=>l.classList.toggle("active",l.getAttribute("href")==="#"+x.target.id));}});},{rootMargin:"-40% 0px -55% 0px"});
   secs.forEach(s=>s&&io.observe(s));
 })();

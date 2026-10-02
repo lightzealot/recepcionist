@@ -740,6 +740,32 @@ def _normalize_sip_phone(value: str | None) -> str | None:
     return None
 
 
+_TEST_ROOM_PREFIX = "test-"
+
+
+def _get_test_caller_override(ctx: agents.JobContext) -> str | None:
+    """Simulated caller ID for dashboard test rooms (None otherwise).
+
+    Reads `test_caller_phone` from job metadata, honored ONLY when the
+    room name starts with "test-". Lets operators verify the
+    known-caller greeting from the dashboard without the real phones.
+    """
+    room_name = getattr(getattr(ctx, "room", None), "name", "") or ""
+    if not room_name.startswith(_TEST_ROOM_PREFIX):
+        return None
+    raw = getattr(getattr(ctx, "job", None), "metadata", "") or ""
+    try:
+        metadata = json.loads(raw) if raw else {}
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(metadata, dict):
+        return None
+    phone = metadata.get("test_caller_phone")
+    if not isinstance(phone, str) or not phone.strip():
+        return None
+    return phone.strip()
+
+
 def _get_sip_phone_from_identity(identity: str) -> str | None:
     match = _SIP_IDENTITY_PHONE_RE.fullmatch(identity.strip())
     if not match:
@@ -2436,6 +2462,19 @@ async def handle_call(ctx: agents.JobContext):
         call_id=ctx.room.name,
         caller_phone=_get_caller_phone(ctx),
     )
+    # Dashboard test rooms simulate a caller ID so the known-caller
+    # greeting can be verified without the real phones. Runs before the
+    # participant scan below (set_caller_phone keeps the first value set).
+    _test_phone = _get_test_caller_override(ctx)
+    if _test_phone is not None:
+        lifecycle.set_caller_phone(_test_phone)
+        logger.info(
+            "callerid: using dashboard test override",
+            extra={
+                "call_id": lifecycle.metadata.call_id,
+                "component": "agent.callerid",
+            },
+        )
     _trace_stage("after_lifecycle_init", lifecycle.metadata.call_id)
 
     logger.info(
