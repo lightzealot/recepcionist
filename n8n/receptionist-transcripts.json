@@ -1,0 +1,433 @@
+{
+  "name": "AI Receptionist - transcripts",
+  "description": null,
+  "activeVersionId": "6a20c337-2859-4a29-a233-02a8aa6a5d7b",
+  "isArchived": false,
+  "versionCounter": 2,
+  "sourceWorkflowId": null,
+  "triggerCount": 1,
+  "nodes": [
+    {
+      "id": "cda8af49-56a4-4c85-aa1c-84766080aec8",
+      "name": "Transcript webhook",
+      "webhookId": "b4751fe8-de76-4b82-9e37-7b8dee755002",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "parameters": {
+        "path": "receptionist-transcripts",
+        "authentication": "headerAuth",
+        "options": {},
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ZA9F2d0g7qzm65cE",
+          "name": "N8N_WEBHOOK_TOKEN"
+        }
+      }
+    },
+    {
+      "id": "0e302e6a-fa72-40ea-9ab2-98094fb4f664",
+      "name": "Split segments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Split a transcript backup into one item per segment.\n// Input: { transcript: { metadata: {...}, segments: [...] } }\n// (webhook wraps the POSTed JSON in `body`.)\nconst b = $input.first().json;\nconst p = b.body ?? b;\nconst t = p.transcript || {};\nconst m = t.metadata || {};\nconst label = { user: \"Caller\", assistant: \"Agent\", tool: \"Tool\" };\nreturn (t.segments || []).map((s) => ({ json: {\n  call_id: m.call_id ?? \"\",\n  timestamp: s.created_at ? new Date(s.created_at > 1e12 ? s.created_at : s.created_at * 1000).toISOString() : \"\",\n  role: label[s.role] ?? (s.role ?? \"\"),\n  text: s.text ?? \"\",\n  caller_phone: m.caller_phone ?? \"\",\n  business: m.business_name ?? \"\",\n}}));"
+      }
+    },
+    {
+      "id": "5b8d04c7-4242-44d0-b291-89e6a34c1581",
+      "name": "Append segments",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        640,
+        300
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1a2O9KIyy9iYSP-E8JoTtfFqh9qdk-tnYUGK7TA55Xmc",
+          "mode": "list",
+          "cachedResultName": "Receptionist messages",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1a2O9KIyy9iYSP-E8JoTtfFqh9qdk-tnYUGK7TA55Xmc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Transcripts"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "call_id": "={{ $json.call_id }}",
+            "timestamp": "={{ $json.timestamp }}",
+            "role": "={{ $json.role }}",
+            "text": "={{ $json.text }}",
+            "caller_phone": "={{ $json.caller_phone }}",
+            "business": "={{ $json.business }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "call_id",
+              "displayName": "call_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "text",
+              "displayName": "text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "caller_phone",
+              "displayName": "caller_phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "business",
+              "displayName": "business",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Sn09BWyRlCy0e1a5",
+          "name": "Sheets IMIA"
+        }
+      }
+    },
+    {
+      "id": "e1fb75eb-2f61-49c6-8d63-888f461ccf88",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        860,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"received\": true}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Transcript webhook": {
+      "main": [
+        [
+          {
+            "node": "Split segments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split segments": {
+      "main": [
+        [
+          {
+            "node": "Append segments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append segments": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodeGroups": [],
+  "settings": {},
+  "staticData": null,
+  "pinData": null,
+  "tags": [],
+  "shared": [
+    {
+      "role": "workflow:owner",
+      "workflowId": "1DMbhEc8GlzTWOTb",
+      "projectId": "iL37QeMfsXlMcgUf",
+      "project": {
+        "id": "iL37QeMfsXlMcgUf",
+        "name": "Andy G <andyontrade@proton.me>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "371bdf76-01ef-4904-98c3-553317481e14",
+        "createdAt": "2025-08-19T22:53:53.541Z",
+        "updatedAt": "2025-08-19T22:56:01.667Z"
+      },
+      "createdAt": "2026-10-05T02:28:33.963Z",
+      "updatedAt": "2026-10-05T02:28:33.963Z"
+    }
+  ],
+  "activeVersion": {
+    "versionId": "6a20c337-2859-4a29-a233-02a8aa6a5d7b",
+    "workflowId": "1DMbhEc8GlzTWOTb",
+    "nodes": [
+      {
+        "id": "cda8af49-56a4-4c85-aa1c-84766080aec8",
+        "name": "Transcript webhook",
+        "webhookId": "b4751fe8-de76-4b82-9e37-7b8dee755002",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          200,
+          300
+        ],
+        "parameters": {
+          "path": "receptionist-transcripts",
+          "authentication": "headerAuth",
+          "options": {},
+          "httpMethod": "POST",
+          "responseMode": "responseNode"
+        },
+        "credentials": {
+          "httpHeaderAuth": {
+            "id": "ZA9F2d0g7qzm65cE",
+            "name": "N8N_WEBHOOK_TOKEN"
+          }
+        }
+      },
+      {
+        "id": "0e302e6a-fa72-40ea-9ab2-98094fb4f664",
+        "name": "Split segments",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          420,
+          300
+        ],
+        "parameters": {
+          "jsCode": "// Split a transcript backup into one item per segment.\n// Input: { transcript: { metadata: {...}, segments: [...] } }\n// (webhook wraps the POSTed JSON in `body`.)\nconst b = $input.first().json;\nconst p = b.body ?? b;\nconst t = p.transcript || {};\nconst m = t.metadata || {};\nconst label = { user: \"Caller\", assistant: \"Agent\", tool: \"Tool\" };\nreturn (t.segments || []).map((s) => ({ json: {\n  call_id: m.call_id ?? \"\",\n  timestamp: s.created_at ? new Date(s.created_at > 1e12 ? s.created_at : s.created_at * 1000).toISOString() : \"\",\n  role: label[s.role] ?? (s.role ?? \"\"),\n  text: s.text ?? \"\",\n  caller_phone: m.caller_phone ?? \"\",\n  business: m.business_name ?? \"\",\n}}));"
+        }
+      },
+      {
+        "id": "5b8d04c7-4242-44d0-b291-89e6a34c1581",
+        "name": "Append segments",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          640,
+          300
+        ],
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1a2O9KIyy9iYSP-E8JoTtfFqh9qdk-tnYUGK7TA55Xmc",
+            "mode": "list",
+            "cachedResultName": "Receptionist messages",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1a2O9KIyy9iYSP-E8JoTtfFqh9qdk-tnYUGK7TA55Xmc/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "Transcripts"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "call_id": "={{ $json.call_id }}",
+              "timestamp": "={{ $json.timestamp }}",
+              "role": "={{ $json.role }}",
+              "text": "={{ $json.text }}",
+              "caller_phone": "={{ $json.caller_phone }}",
+              "business": "={{ $json.business }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "call_id",
+                "displayName": "call_id",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "timestamp",
+                "displayName": "timestamp",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "role",
+                "displayName": "role",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "text",
+                "displayName": "text",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "caller_phone",
+                "displayName": "caller_phone",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "business",
+                "displayName": "business",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ]
+          },
+          "options": {}
+        },
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Sn09BWyRlCy0e1a5",
+            "name": "Sheets IMIA"
+          }
+        }
+      },
+      {
+        "id": "e1fb75eb-2f61-49c6-8d63-888f461ccf88",
+        "name": "Respond OK",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          860,
+          300
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\"received\": true}",
+          "options": {}
+        }
+      }
+    ],
+    "connections": {
+      "Transcript webhook": {
+        "main": [
+          [
+            {
+              "node": "Split segments",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Split segments": {
+        "main": [
+          [
+            {
+              "node": "Append segments",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Append segments": {
+        "main": [
+          [
+            {
+              "node": "Respond OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Andy G",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "createdAt": "2026-10-05T02:32:18.945Z",
+    "updatedAt": "2026-10-05T02:32:18.945Z",
+    "workflowPublishHistory": [
+      {
+        "id": 50,
+        "workflowId": "1DMbhEc8GlzTWOTb",
+        "versionId": "6a20c337-2859-4a29-a233-02a8aa6a5d7b",
+        "event": "activated",
+        "userId": "371bdf76-01ef-4904-98c3-553317481e14",
+        "createdAt": "2026-10-05T02:32:18.990Z"
+      }
+    ]
+  }
+}

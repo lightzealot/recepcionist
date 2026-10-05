@@ -381,6 +381,27 @@ class CallLifecycle:
                         "component": "lifecycle.transcript",
                     },
                 )
+            backup_cfg = self.config.transcripts.backup_webhook
+            if backup_cfg is not None:
+                try:
+                    from receptionist.transcript.backup import (
+                        build_backup_payload,
+                        post_transcript_backup,
+                    )
+
+                    await post_transcript_backup(
+                        backup_cfg, build_backup_payload(self.metadata, segments)
+                    )
+                except Exception:
+                    # Backup must never break finalization (emails below).
+                    logger.exception(
+                        "transcript backup POST failed during call finalization",
+                        extra={
+                            "call_id": self.metadata.call_id,
+                            "business_name": self.metadata.business_name,
+                            "component": "lifecycle.transcript_backup",
+                        },
+                    )
 
         # Fan out email triggers.
         # Consolidated mode (triggers.on_call_end=True): exactly ONE email per

@@ -485,6 +485,7 @@ class TranscriptsConfig(BaseModel):
     enabled: bool
     storage: TranscriptStorageConfig
     formats: list[Literal["json", "markdown"]] = Field(default_factory=lambda: ["json", "markdown"])
+    backup_webhook: WebhookChannel | None = None
 
 
 # ---------------------------------------------------------------------------

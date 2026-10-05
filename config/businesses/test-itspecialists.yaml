@@ -129,6 +129,13 @@ transcripts:
     type: "local"
     path: "./transcripts/test-itspecialists/"
   formats: ["json", "markdown"]
+  # Backup: every finalized transcript POSTs {"transcript": {...}} here
+  # (n8n splits segments into rows in the Transcripts sheet tab).
+  backup_webhook:
+    type: "webhook"
+    url: "${N8N_TRANSCRIPT_WEBHOOK_URL}"
+    headers:
+      Authorization: "Bearer ${N8N_WEBHOOK_TOKEN}"
 
 retention:
   recordings_days: 30
