@@ -45,6 +45,9 @@ const seenAuth = [];
 async function fetchStub(url, opts) {
   const path = url.replace("https://api.test", "");
   seenAuth.push((opts && opts.headers && opts.headers.Authorization) || "");
+  if (path.startsWith("/api/voice-preview/")) {
+    return { ok: true, status: 200, blob: async () => ({}) };
+  }
   const method = (opts && opts.method && opts.method.toUpperCase()) || "GET";
   const key = (method !== "GET" && (path + ":" + method) in canned) ? path + ":" + method : path;
   if (!(key in canned)) return { ok: false, status: 404, json: async () => ({}) };
@@ -62,6 +65,7 @@ function makeEl() {
     setAttribute() {}, getAttribute: () => null,
     querySelector: () => null, querySelectorAll: () => [],
     closest: () => null, remove() {}, click() {}, focus() {},
+    play: () => Promise.resolve(), pause() {},
   };
   el.lastChild = el;
   el.nextElementSibling = null;
@@ -90,6 +94,8 @@ const ls = { rx_api_url: "https://api.test", rx_api_token: "test-token", rx_them
 
 const sandbox = {
   document: documentStub,
+  URL: { createObjectURL: () => "blob:fake" },
+  Blob: function (parts) { this.parts = parts; },
   window: {}, // no IntersectionObserver -> exercises the guard
   localStorage: {
     getItem: (k) => (k in ls ? ls[k] : null),
@@ -165,6 +171,14 @@ const assert = (cond, msg) => {
     await new Promise((r) => setImmediate(r));
   assert(byId.voiceSave.disabled === false, "voice button re-enabled");
   assert(byId.voiceMsg.textContent.includes("next call"), "voice save confirmed");
+
+  // voice preview: playable voice streams blob into the audio element
+  byId.voiceId.value = "sage";
+  byId.voicePlay._h.click();
+  for (let i = 0; i < 100 && !byId.voiceMsg.textContent.includes("Playing"); i++)
+    await new Promise((r) => setImmediate(r));
+  assert(byId.voiceMsg.textContent.includes("Playing sage"), "voice preview plays");
+  assert(byId.voiceAudio.src === "blob:fake", "preview blob loaded into player");
 
   console.log("SMOKE PASS");
 })().catch((e) => { console.error("FAIL:", e); process.exit(1); });

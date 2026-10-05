@@ -388,6 +388,11 @@ footer.note{color:var(--muted);font-size:12.5px;margin-top:18px}
             <label>Voice
               <select id="voiceId" aria-label="Agent voice"></select>
             </label>
+            <div class="row">
+              <button type="button" class="btn small" id="voicePlay">Play preview</button>
+              <span class="muted small">marin/verse have no preview — use a test call.</span>
+              <audio id="voiceAudio" hidden></audio>
+            </div>
             <label>Greeting
               <textarea id="voiceGreet" rows="3" maxlength="500" aria-label="Call greeting"></textarea>
             </label>
@@ -657,6 +662,21 @@ async function submitVoice(e){
   btn.disabled=false;
 }
 
+async function previewVoice(){
+  const v=$("#voiceId").value,msg=$("#voiceMsg");
+  if(v==="marin"||v==="verse"){toast("No preview for "+v+" — use a test call.");return;}
+  msg.textContent="Loading preview…";
+  try{
+    const{url,token}=store.load();
+    const res=await fetch(url.replace(/\/$/,"")+"/api/voice-preview/"+encodeURIComponent(v),{headers:token?{Authorization:"Bearer "+token}:{}});
+    if(!res.ok)throw new Error("API "+res.status);
+    const player=$("#voiceAudio");
+    player.src=URL.createObjectURL(await res.blob());
+    await player.play();
+    msg.textContent="Playing "+v+".";
+  }catch(err){msg.textContent="Failed: "+err.message;}
+}
+
 function renderConfig(){
   const box=$("#configBox");
   const c=cache.config;
@@ -723,6 +743,7 @@ $("#exportBtn").addEventListener("click",exportCSV);
 $("#replyForm").addEventListener("submit",e=>{e.preventDefault();toast("Replies — coming soon.");});
 $("#testForm").addEventListener("submit",submitTestCall);
 $("#voiceForm").addEventListener("submit",submitVoice);
+$("#voicePlay").addEventListener("click",previewVoice);
 $("#testCopy").addEventListener("click",copyTestUrl);
 document.addEventListener("change",e=>{
   const r=e.target&&e.target.closest?e.target.closest('input[name="theme"]'):null;

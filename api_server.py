@@ -281,6 +281,61 @@ def patch_config(req: ConfigPatchRequest) -> dict:
     }
 
 
+# marin/verse are Realtime-only voices with no TTS equivalent to sample.
+PREVIEWABLE_VOICES = tuple(v for v in EDITABLE_VOICES if v not in ("marin", "verse"))
+PREVIEW_TEXT = "Hello! This is a preview of my voice for ITSpecialists."
+PREVIEW_MODEL = "gpt-4o-mini-tts"
+
+
+def _previews_dir() -> Path:
+    return ROOT / "config" / "previews"
+
+
+async def _synthesize_preview(voice: str, api_key: str) -> bytes:
+    import httpx
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(
+            "https://api.openai.com/v1/audio/speech",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={"model": PREVIEW_MODEL, "input": PREVIEW_TEXT, "voice": voice},
+        )
+    if resp.status_code != 200:
+        raise RuntimeError(f"TTS HTTP {resp.status_code}")
+    return resp.content
+
+
+@app.get("/api/voice-preview/{voice}", dependencies=[Depends(require_token)])
+async def voice_preview(voice: str):
+    """Sample mp3 for a voice, generated once via cheap TTS then cached.
+
+    Cached under the config volume so previews survive rebuilds.
+    Realtime-only voices (marin, verse) have no TTS equivalent: 404.
+    """
+    from fastapi.responses import FileResponse
+
+    if voice not in EDITABLE_VOICES:
+        raise HTTPException(400, f"unknown voice: {voice!r}")
+    if voice not in PREVIEWABLE_VOICES:
+        raise HTTPException(
+            404, f"no preview for {voice} (Realtime-only voice) — use a test call")
+    path = _previews_dir() / f"{voice}.mp3"
+    if not path.exists():
+        api_key = os.environ.get("OPENAI_API_KEY", "")
+        if not api_key:
+            raise HTTPException(500, "OPENAI_API_KEY not configured")
+        try:
+            data = await _synthesize_preview(voice, api_key)
+        except Exception as e:  # noqa: BLE001 - no secrets in type name
+            raise HTTPException(502, f"preview synthesis failed: {type(e).__name__}")
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        except OSError as e:
+            raise HTTPException(500, f"preview cache write failed: {e}")
+    return FileResponse(path, media_type="audio/mpeg", filename=f"{voice}.mp3")
+
+
 @app.get("/api/known-callers", dependencies=[Depends(require_token)])
 def known_callers() -> dict:
     from receptionist.known_callers import load_known_callers
