@@ -159,6 +159,125 @@ def config_summary() -> dict:
         "faqs": len(c.faqs),
         "transfers": len(c.routing),
         "greeting": c.greeting,
+        "max_duration_min": (c.voice.idle.max_call_duration_seconds // 60
+                             if c.voice.idle.max_call_duration_seconds else None),
+    }
+
+
+EDITABLE_VOICES = (
+    "alloy", "ash", "ballad", "coral", "echo", "fable",
+    "marin", "nova", "onyx", "sage", "shimmer", "verse",
+)
+CONFIG_PATCH_FIELDS = ("voice_id", "greeting", "max_duration_min")
+_CONFIG_BACKUPS_KEPT = 3
+
+
+def apply_config_patch(data: dict, patch: dict) -> dict:
+    """Validate + apply a whitelisted config edit to parsed YAML. Pure.
+
+    Raises ValueError on unknown fields, empty patch, or out-of-range
+    values. Never mutates `data`.
+    """
+    import copy
+
+    unknown = set(patch) - set(CONFIG_PATCH_FIELDS)
+    if unknown:
+        raise ValueError(f"fields not editable via dashboard: {sorted(unknown)}")
+    if not patch:
+        raise ValueError("empty patch")
+    out = copy.deepcopy(data)
+    if "voice_id" in patch:
+        voice = patch["voice_id"]
+        if voice not in EDITABLE_VOICES:
+            raise ValueError(f"unknown voice_id: {voice!r}")
+        out.setdefault("voice", {})["voice_id"] = voice
+    if "greeting" in patch:
+        greeting = patch["greeting"]
+        if not isinstance(greeting, str) or not greeting.strip():
+            raise ValueError("greeting must be non-empty text")
+        if len(greeting) > 500:
+            raise ValueError("greeting must be 500 chars or fewer")
+        out["greeting"] = greeting.strip()
+    if "max_duration_min" in patch:
+        minutes = patch["max_duration_min"]
+        if (isinstance(minutes, bool) or not isinstance(minutes, int)
+                or not 1 <= minutes <= 30):
+            raise ValueError("max_duration_min must be an integer 1-30")
+        out.setdefault("voice", {}).setdefault("idle", {})[
+            "max_call_duration_seconds"] = minutes * 60
+    return out
+
+
+def _business_config_path() -> Path:
+    return ROOT / "config" / "businesses" / f"{SLUG}.yaml"
+
+
+class ConfigPatchRequest(BaseModel):
+    voice_id: str | None = None
+    greeting: str | None = None
+    max_duration_min: int | None = None
+
+
+@app.patch("/api/config", dependencies=[Depends(require_token)])
+def patch_config(req: ConfigPatchRequest) -> dict:
+    """Edit voice/greeting/call-cap in the business YAML (whitelist only).
+
+    Writes a timestamped .bak (keeps the last 3) and re-loads the file
+    through the real config validator before returning. Applies to the
+    next call — no restart needed. Requires /app/config on a Docker
+    volume in production or a rebuild wipes the edit.
+    """
+    import shutil
+    from datetime import datetime, timezone
+
+    import yaml
+
+    patch = {k: v for k, v in req.model_dump().items() if v is not None}
+    path = _business_config_path()
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except OSError:
+        raise HTTPException(404, f"config '{SLUG}' not found")
+    if not isinstance(data, dict):
+        raise HTTPException(500, "config file is not a mapping")
+    try:
+        new_data = apply_config_patch(data, patch)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    backup = path.with_name(f"{path.name}.bak.{stamp}")
+    try:
+        shutil.copy2(path, backup)
+        for old in sorted(path.parent.glob(f"{path.name}.bak.*"))[: -_CONFIG_BACKUPS_KEPT]:
+            old.unlink(missing_ok=True)
+        path.write_text(
+            yaml.safe_dump(new_data, allow_unicode=True, sort_keys=False),
+            encoding="utf-8",
+        )
+    except OSError as e:
+        raise HTTPException(500, f"config write failed: {e}")
+    try:
+        from receptionist.config import load_config
+
+        updated = load_config(str(path))
+    except Exception as e:  # noqa: BLE001 - validator detail is safe
+        try:
+            shutil.copy2(backup, path)  # restore last good on validation failure
+        except OSError:
+            pass
+        raise HTTPException(500, f"edited config failed validation: {e}")
+    idle = updated.voice.idle
+    return {
+        "updated": sorted(patch),
+        "updated_at": stamp,
+        "backup": backup.name,
+        "values": {
+            "voice_id": updated.voice.voice_id,
+            "greeting": updated.greeting,
+            "max_duration_min": (idle.max_call_duration_seconds // 60
+                                 if idle.max_call_duration_seconds else None),
+        },
+        "note": "Applies to the next call — no restart needed.",
     }
 
 

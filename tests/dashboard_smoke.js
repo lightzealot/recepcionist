@@ -32,7 +32,9 @@ const canned = {
     month_categories: [{ category: "cat", used: "2", unit: "min", price: 0.01 }] },
   "/api/config": { business: "ITSpecialists", type: "MSP", timezone: "America/Toronto",
     model: "gpt-realtime-2.1-mini", voice: "marin", languages: ["en"],
-    faqs: 16, transfers: 0, greeting: "Hello" },
+    faqs: 16, transfers: 0, greeting: "Hello", max_duration_min: 5 },
+  "/api/config:PATCH": { updated: ["greeting", "max_duration_min", "voice_id"],
+    values: { voice_id: "marin", greeting: "Hello", max_duration_min: 5 } },
   "/api/known-callers": { callers: [
     { phone: "7054810426", company: "Harmony Dental", contact: "" },
   ]},
@@ -43,8 +45,10 @@ const seenAuth = [];
 async function fetchStub(url, opts) {
   const path = url.replace("https://api.test", "");
   seenAuth.push((opts && opts.headers && opts.headers.Authorization) || "");
-  if (!(path in canned)) return { ok: false, status: 404, json: async () => ({}) };
-  return { ok: true, status: 200, json: async () => canned[path] };
+  const method = (opts && opts.method && opts.method.toUpperCase()) || "GET";
+  const key = (method !== "GET" && (path + ":" + method) in canned) ? path + ":" + method : path;
+  if (!(key in canned)) return { ok: false, status: 404, json: async () => ({}) };
+  return { ok: true, status: 200, json: async () => canned[key] };
 }
 
 // ---- stub DOM ----
@@ -150,6 +154,17 @@ const assert = (cond, msg) => {
   assert(byId.testUrl.value.includes("meet.livekit.io"), "join link rendered");
   assert(byId.testRoom.textContent === "test-9", "test room rendered");
   assert(byId.testStart.disabled === false, "test button re-enabled");
+
+  // voice panel: current values fill the form, save posts PATCH
+  assert(byId.voiceId.innerHTML.includes("marin"), "voice options rendered");
+  assert(byId.voiceId.value === "marin", "current voice selected");
+  assert(byId.voiceGreet.value === "Hello", "greeting filled");
+  assert(byId.voiceMax.value === "5", "max minutes filled");
+  byId.voiceForm._h.submit({ preventDefault() {} });
+  for (let i = 0; i < 100 && byId.voiceSave.disabled !== false; i++)
+    await new Promise((r) => setImmediate(r));
+  assert(byId.voiceSave.disabled === false, "voice button re-enabled");
+  assert(byId.voiceMsg.textContent.includes("next call"), "voice save confirmed");
 
   console.log("SMOKE PASS");
 })().catch((e) => { console.error("FAIL:", e); process.exit(1); });

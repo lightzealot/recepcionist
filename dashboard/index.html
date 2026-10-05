@@ -140,11 +140,12 @@ button{font:inherit;cursor:pointer}
 .setrow{display:flex;align-items:center;gap:12px;padding:11px 2px;border-top:1px solid var(--line)}
 .setrow:first-child{border-top:0}
 .setrow small{display:block;color:var(--muted)}
-select,input[type="text"],input[type="url"],input[type="password"]{font:inherit}
+select,textarea,input[type="text"],input[type="url"],input[type="password"],input[type="number"]{font:inherit}
 select{border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:#fff;max-width:100%}
 .form{display:grid;gap:12px}
 .form label{display:grid;gap:6px;font-weight:600;font-size:14px}
-.form input{border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.form input,.form textarea,.form select{border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.form textarea{resize:vertical;min-height:64px}
 .form .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .muted{color:var(--muted)}
 .small{font-size:12.5px}
@@ -217,7 +218,7 @@ footer.note{color:var(--muted);font-size:12.5px;margin-top:18px}
 [data-theme="ledger"] .badge{border:2px solid #0A0A0A}
 [data-theme="ledger"] .b-soon{border-style:dashed}
 [data-theme="ledger"] .search,[data-theme="ledger"] .status-pill{border:2px solid #0A0A0A}
-[data-theme="ledger"] .form input,[data-theme="ledger"] .replybox input,[data-theme="ledger"] select{border:2px solid #0A0A0A}
+[data-theme="ledger"] .form input,[data-theme="ledger"] .form textarea,[data-theme="ledger"] .replybox input,[data-theme="ledger"] select{border:2px solid #0A0A0A}
 [data-theme="ledger"] .tab{border:2px solid #0A0A0A}
 [data-theme="ledger"] .tab[aria-selected="true"]{background:#E8C6B8;color:#0A0A0A;border-color:#0A0A0A}
 [data-theme="ledger"] .msg .bubble,[data-theme="ledger"] .feeditem{border:2px solid #0A0A0A}
@@ -267,6 +268,7 @@ footer.note{color:var(--muted);font-size:12.5px;margin-top:18px}
       <a href="#performance">Performance</a>
       <a href="#spend">Spend</a>
       <a href="#testcall">Test call</a>
+      <a href="#voicecfg">Voice</a>
       <a href="#settings">Settings</a>
     </nav>
     <div class="navlabel">AI AGENT</div>
@@ -379,6 +381,27 @@ footer.note{color:var(--muted);font-size:12.5px;margin-top:18px}
         </div>
       </section>
 
+      <section class="card" id="voicecfg" aria-labelledby="voiceH" style="margin-bottom:14px">
+        <div class="card-h"><h2 id="voiceH">Voice &amp; behavior</h2><span class="badge b-live">Live</span><span class="hint">Applies to the next call · no restart</span></div>
+        <div class="card-b">
+          <form id="voiceForm" class="form">
+            <label>Voice
+              <select id="voiceId" aria-label="Agent voice"></select>
+            </label>
+            <label>Greeting
+              <textarea id="voiceGreet" rows="3" maxlength="500" aria-label="Call greeting"></textarea>
+            </label>
+            <label>Max call length (minutes, 1–30)
+              <input id="voiceMax" type="number" min="1" max="30" step="1" aria-label="Max call length in minutes">
+            </label>
+            <div class="row">
+              <button type="submit" class="btn primary" id="voiceSave">Save</button>
+              <span id="voiceMsg" class="muted small"></span>
+            </div>
+          </form>
+        </div>
+      </section>
+
       <div class="grid2" style="margin-bottom:14px">
         <section class="card" id="spend" aria-labelledby="spendH">
           <div class="card-h"><h2 id="spendH">Spend</h2><span class="hint">Twilio · this month</span><span class="right"><button class="btn small" type="button" id="spendRefresh">Refresh</button></span></div>
@@ -435,6 +458,12 @@ async function api(path){
 async function apiPost(path,body){
   const{url,token}=store.load();
   const res=await fetch(url.replace(/\/$/,"")+path,{method:"POST",headers:Object.assign({"Content-Type":"application/json"},token?{Authorization:"Bearer "+token}:{}),body:JSON.stringify(body||{})});
+  if(!res.ok)throw new Error("API "+res.status+" on "+path);
+  return res.json();
+}
+async function apiPatch(path,body){
+  const{url,token}=store.load();
+  const res=await fetch(url.replace(/\/$/,"")+path,{method:"PATCH",headers:Object.assign({"Content-Type":"application/json"},token?{Authorization:"Bearer "+token}:{}),body:JSON.stringify(body||{})});
   if(!res.ok)throw new Error("API "+res.status+" on "+path);
   return res.json();
 }
@@ -602,6 +631,32 @@ function copyTestUrl(){
   catch(e){toast("Copy failed — long-press the link.");}
 }
 
+const VOICES=["alloy","ash","ballad","coral","echo","fable","marin","nova","onyx","sage","shimmer","verse"];
+
+function fillVoiceForm(){
+  const c=cache.config||{};
+  const sel=$("#voiceId");
+  if(sel&&!sel.dataset.filled){sel.innerHTML=VOICES.map(v=>"<option>"+esc(v)+"</option>").join("");sel.dataset.filled="1";}
+  if(sel)sel.value=c.voice||"marin";
+  if($("#voiceGreet"))$("#voiceGreet").value=c.greeting||"";
+  if($("#voiceMax"))$("#voiceMax").value=c.max_duration_min??5;
+}
+
+async function submitVoice(e){
+  e.preventDefault();
+  const btn=$("#voiceSave"),msg=$("#voiceMsg");
+  btn.disabled=true;msg.textContent="Saving…";
+  try{
+    const r=await apiPatch("/api/config",{voice_id:$("#voiceId").value,greeting:$("#voiceGreet").value,max_duration_min:parseInt($("#voiceMax").value,10)});
+    const v=(r.values||{});
+    if(v.voice_id)$("#voiceId").value=v.voice_id;
+    if(v.greeting)$("#voiceGreet").value=v.greeting;
+    msg.textContent="Saved — applies to the next call.";
+    toast("Voice settings saved.");
+  }catch(err){msg.textContent="Failed: "+err.message;}
+  btn.disabled=false;
+}
+
 function renderConfig(){
   const box=$("#configBox");
   const c=cache.config;
@@ -630,7 +685,7 @@ async function loadAll(){
   if(fail){setConn("err","Connection failed");toast("API error: "+fail.reason.message);return;}
   cache.status=val(0);cache.calls=val(1).calls||[];cache.messages=val(2).messages||[];cache.spend=val(3);cache.config=val(4);cache.callers=(val(5)||{}).callers||[];
   setConn("ok","Connected");
-  renderHead();renderKpis();renderCalls();renderMessages();renderFeed();renderChart();renderSpend();renderConfig();renderTestCallers();
+  renderHead();renderKpis();renderCalls();renderMessages();renderFeed();renderChart();renderSpend();renderConfig();renderTestCallers();fillVoiceForm();
 }
 
 function download(name,text){
@@ -667,6 +722,7 @@ $("#spendRefresh").addEventListener("click",async()=>{try{cache.spend=await api(
 $("#exportBtn").addEventListener("click",exportCSV);
 $("#replyForm").addEventListener("submit",e=>{e.preventDefault();toast("Replies — coming soon.");});
 $("#testForm").addEventListener("submit",submitTestCall);
+$("#voiceForm").addEventListener("submit",submitVoice);
 $("#testCopy").addEventListener("click",copyTestUrl);
 document.addEventListener("change",e=>{
   const r=e.target&&e.target.closest?e.target.closest('input[name="theme"]'):null;
@@ -684,7 +740,7 @@ $("#settingsForm").addEventListener("submit",async e=>{
 (function(){
   if(!("IntersectionObserver" in window))return;
   const links=$$("#sideNav a");
-  const secs=["overview","calls","bookings","messages","performance","spend","testcall","settings"].map(id=>document.getElementById(id));
+  const secs=["overview","calls","bookings","messages","performance","spend","testcall","voicecfg","settings"].map(id=>document.getElementById(id));
   const io=new IntersectionObserver(es=>{es.forEach(x=>{if(x.isIntersecting){links.forEach(l=>l.classList.toggle("active",l.getAttribute("href")==="#"+x.target.id));}});},{rootMargin:"-40% 0px -55% 0px"});
   secs.forEach(s=>s&&io.observe(s));
 })();
