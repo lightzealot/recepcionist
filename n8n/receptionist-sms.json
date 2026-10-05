@@ -1,0 +1,399 @@
+{
+  "name": "AI Receptionist - SMS",
+  "description": null,
+  "activeVersionId": "6c4cbf0b-ae98-4687-8c34-bed346443cc1",
+  "isArchived": false,
+  "versionCounter": 1,
+  "sourceWorkflowId": null,
+  "triggerCount": 1,
+  "nodes": [
+    {
+      "name": "SMS webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "receptionist-sms",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "7d3334e1-0e02-414a-be0a-c543e502f0a4",
+      "webhookId": "c0cba9ea-2623-458d-b1ff-f8f628393e6c"
+    },
+    {
+      "name": "Verify + normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Inbound SMS from Twilio (form-encoded). Fail closed on bad signature\n// so nobody can inject rows with plain POSTs.\nconst crypto = require('crypto');\nconst AUTH_TOKEN = 'REPLACE_WITH_TWILIO_AUTH_TOKEN';\nconst WEBHOOK_URL = 'https://n8n.andresgomez.store/webhook/receptionist-sms';\nconst b = $input.first().json;\nconst p = b.body ?? b;\nconst headers = b.headers ?? {};\nconst sig = headers['x-twilio-signature'] || '';\nconst keys = Object.keys(p).filter((k) => typeof p[k] !== 'object').sort();\nlet data = WEBHOOK_URL;\nfor (const k of keys) data += k + (p[k] ?? '');\nconst expected = crypto.createHmac('sha1', AUTH_TOKEN).update(data).digest('base64');\nif (!sig || sig !== expected) throw new Error('invalid Twilio signature');\nreturn [{ json: {\n  sender: p.From ?? '',\n  text: p.Body ?? '',\n  to_number: p.To ?? '',\n  message_sid: p.MessageSid ?? '',\n  timestamp: new Date().toISOString(),\n}}];"
+      },
+      "id": "60e60c35-e85b-42e9-bd45-3461c42ab556"
+    },
+    {
+      "name": "Append SMS",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        640,
+        300
+      ],
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1a2O9KIyy9iYSP-E8JoTtfFqh9qdk-tnYUGK7TA55Xmc",
+          "mode": "list",
+          "cachedResultName": "Receptionist messages",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1a2O9KIyy9iYSP-E8JoTtfFqh9qdk-tnYUGK7TA55Xmc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "SMS"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sender": "={{ $json.sender }}",
+            "text": "={{ $json.text }}",
+            "to_number": "={{ $json.to_number }}",
+            "message_sid": "={{ $json.message_sid }}",
+            "timestamp": "={{ $json.timestamp }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "sender",
+              "displayName": "sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "text",
+              "displayName": "text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "to_number",
+              "displayName": "to_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message_sid",
+              "displayName": "message_sid",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Sn09BWyRlCy0e1a5",
+          "name": "Sheets IMIA"
+        }
+      },
+      "id": "bdc2b579-d95f-44ba-8a0a-7252f003b66d"
+    },
+    {
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        860,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"received\": true}",
+        "options": {}
+      },
+      "id": "19d3ff20-e349-4e56-a26c-b82027f37293"
+    }
+  ],
+  "connections": {
+    "SMS webhook": {
+      "main": [
+        [
+          {
+            "node": "Verify + normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify + normalize": {
+      "main": [
+        [
+          {
+            "node": "Append SMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append SMS": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodeGroups": [],
+  "settings": {},
+  "staticData": null,
+  "pinData": null,
+  "tags": [],
+  "shared": [
+    {
+      "role": "workflow:owner",
+      "workflowId": "EhSGOzVnWKJYB7Ox",
+      "projectId": "iL37QeMfsXlMcgUf",
+      "project": {
+        "id": "iL37QeMfsXlMcgUf",
+        "name": "Andy G <andyontrade@proton.me>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "371bdf76-01ef-4904-98c3-553317481e14",
+        "createdAt": "2025-08-19T22:53:53.541Z",
+        "updatedAt": "2025-08-19T22:56:01.667Z"
+      },
+      "createdAt": "2026-10-05T19:26:06.445Z",
+      "updatedAt": "2026-10-05T19:26:06.445Z"
+    }
+  ],
+  "activeVersion": {
+    "versionId": "6c4cbf0b-ae98-4687-8c34-bed346443cc1",
+    "workflowId": "EhSGOzVnWKJYB7Ox",
+    "nodes": [
+      {
+        "name": "SMS webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          200,
+          300
+        ],
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "receptionist-sms",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "7d3334e1-0e02-414a-be0a-c543e502f0a4",
+        "webhookId": "c0cba9ea-2623-458d-b1ff-f8f628393e6c"
+      },
+      {
+        "name": "Verify + normalize",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          420,
+          300
+        ],
+        "parameters": {
+          "jsCode": "// Inbound SMS from Twilio (form-encoded). Fail closed on bad signature\n// so nobody can inject rows with plain POSTs.\nconst crypto = require('crypto');\nconst AUTH_TOKEN = 'REPLACE_WITH_TWILIO_AUTH_TOKEN';\nconst WEBHOOK_URL = 'https://n8n.andresgomez.store/webhook/receptionist-sms';\nconst b = $input.first().json;\nconst p = b.body ?? b;\nconst headers = b.headers ?? {};\nconst sig = headers['x-twilio-signature'] || '';\nconst keys = Object.keys(p).filter((k) => typeof p[k] !== 'object').sort();\nlet data = WEBHOOK_URL;\nfor (const k of keys) data += k + (p[k] ?? '');\nconst expected = crypto.createHmac('sha1', AUTH_TOKEN).update(data).digest('base64');\nif (!sig || sig !== expected) throw new Error('invalid Twilio signature');\nreturn [{ json: {\n  sender: p.From ?? '',\n  text: p.Body ?? '',\n  to_number: p.To ?? '',\n  message_sid: p.MessageSid ?? '',\n  timestamp: new Date().toISOString(),\n}}];"
+        },
+        "id": "60e60c35-e85b-42e9-bd45-3461c42ab556"
+      },
+      {
+        "name": "Append SMS",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          640,
+          300
+        ],
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1a2O9KIyy9iYSP-E8JoTtfFqh9qdk-tnYUGK7TA55Xmc",
+            "mode": "list",
+            "cachedResultName": "Receptionist messages",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1a2O9KIyy9iYSP-E8JoTtfFqh9qdk-tnYUGK7TA55Xmc/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "mode": "name",
+            "value": "SMS"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "sender": "={{ $json.sender }}",
+              "text": "={{ $json.text }}",
+              "to_number": "={{ $json.to_number }}",
+              "message_sid": "={{ $json.message_sid }}",
+              "timestamp": "={{ $json.timestamp }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "sender",
+                "displayName": "sender",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "text",
+                "displayName": "text",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "to_number",
+                "displayName": "to_number",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "message_sid",
+                "displayName": "message_sid",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "timestamp",
+                "displayName": "timestamp",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ]
+          },
+          "options": {}
+        },
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "Sn09BWyRlCy0e1a5",
+            "name": "Sheets IMIA"
+          }
+        },
+        "id": "bdc2b579-d95f-44ba-8a0a-7252f003b66d"
+      },
+      {
+        "name": "Respond OK",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          860,
+          300
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "{\"received\": true}",
+          "options": {}
+        },
+        "id": "19d3ff20-e349-4e56-a26c-b82027f37293"
+      }
+    ],
+    "connections": {
+      "SMS webhook": {
+        "main": [
+          [
+            {
+              "node": "Verify + normalize",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Verify + normalize": {
+        "main": [
+          [
+            {
+              "node": "Append SMS",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Append SMS": {
+        "main": [
+          [
+            {
+              "node": "Respond OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "nodeGroups": [],
+    "authors": "Andy G",
+    "name": null,
+    "description": null,
+    "autosaved": false,
+    "createdAt": "2026-10-05T19:26:06.447Z",
+    "updatedAt": "2026-10-05T19:26:06.447Z",
+    "workflowPublishHistory": [
+      {
+        "id": 51,
+        "workflowId": "EhSGOzVnWKJYB7Ox",
+        "versionId": "6c4cbf0b-ae98-4687-8c34-bed346443cc1",
+        "event": "activated",
+        "userId": "371bdf76-01ef-4904-98c3-553317481e14",
+        "createdAt": "2026-10-05T19:26:06.892Z"
+      }
+    ]
+  }
+}
